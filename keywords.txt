@@ -1,0 +1,19 @@
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+OXRS_SENSORS	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+begin       KEYWORD2
+oled		KEYWORD2
+tele		KEYWORD2
+conf		KEYWORD2
+cmnd		KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
