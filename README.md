@@ -27,7 +27,7 @@ needed addon libraries:
 ```
 
 see the examples folder for example setups for esp8266, esp32, and LilyGO POE Ethernet
-the esp8266 and esp32 examples have the code needed to run as is and with commenting / uncomenting liens of code can do etehrnet or wifi usage
+the esp8266 and esp32 examples have the code needed to run as is and with commenting / uncommenting lines of code can do ethernet or wifi usage
 
 the core of the OXRS_SENSORS:
 ```c++
@@ -40,15 +40,15 @@ OXRS_SENSORS sensor(WiFi, Ethernet, mqtt); // use this initializer when using et
 OXRS_SENSORS sensor(WiFi, mqtt);           // use this initializer when using wifi
 
 // starts up the i2c line and starts scanning / setting up sensors
-sensor.startup();      // standard i2c GPIO
-sensor.startup(33,32); // LILYGO POE PWM Sheild - SDA / SCL GPIO values
-sensor.startup(4,0);   // D1 Mini PWM module    - SDA / SCL GPIO values
+sensor.begin();      // standard i2c GPIO
+sensor.begin(33,32); // LILYGO POE PWM Sheild - SDA / SCL GPIO values
+sensor.begin(4,0);   // D1 Mini PWM module    - SDA / SCL GPIO values
 
 // for updating the screen
 // this is usually called before starting Ethernet or wifi - will start by showing mac address
 // called again after initializing internet connection will then update with IP address
 // then it should be call within your main loop to ensure it remains updated.
-sensor.OLED(); 
+sensor.oled(); 
 
 // for updating the sensors and sending their data via mqtt on the TELE topic
 // placed in main program loop
