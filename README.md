@@ -31,7 +31,7 @@ the esp8266 and esp32 examples have the code needed to run as is and with commen
 
 the core of the OXRS_SENSORS:
 ```c++
-#include "OXRS_SENSORS.h"             // for Qwiic i2c sensors (this is the library)
+#include <OXRS_SENSORS.h>             // for Qwiic i2c sensors (this is the library)
 
 // initialize the library instance
 // the only variable that may change is mqtt should you change the OXRS_MQTT initializer
