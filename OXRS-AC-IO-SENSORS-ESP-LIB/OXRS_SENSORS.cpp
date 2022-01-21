@@ -276,23 +276,23 @@ void OXRS_SENSORS::tele()
 
 void OXRS_SENSORS::conf(JsonVariant json)
 {
-  if (json.containsKey("ScreenMode")) // for what mode the OLED is in
+  if (json.containsKey("screenMode")) // for what mode the OLED is in
   {
-    if (strcmp(json["ScreenMode"], "off") == 0){_screenMode = OLED_MODE_OFF;}
-    if (strcmp(json["ScreenMode"], "one") == 0){_screenMode = OLED_MODE_ONE;}
-    if (strcmp(json["ScreenMode"], "two") == 0){_screenMode = OLED_MODE_TWO;}
-    if (strcmp(json["ScreenMode"], "three") == 0){_screenMode = OLED_MODE_THREE;}
-    if (strcmp(json["ScreenMode"], "four") == 0){_screenMode = OLED_MODE_FOUR;} 
-    if (strcmp(json["ScreenMode"], "five") == 0){_screenMode = OLED_MODE_FIVE;}
+    if (strcmp(json["screenMode"], "off") == 0){_screenMode = OLED_MODE_OFF;}
+    if (strcmp(json["screenMode"], "one") == 0){_screenMode = OLED_MODE_ONE;}
+    if (strcmp(json["screenMode"], "two") == 0){_screenMode = OLED_MODE_TWO;}
+    if (strcmp(json["screenMode"], "three") == 0){_screenMode = OLED_MODE_THREE;}
+    if (strcmp(json["screenMode"], "four") == 0){_screenMode = OLED_MODE_FOUR;} 
+    if (strcmp(json["screenMode"], "five") == 0){_screenMode = OLED_MODE_FIVE;}
   }
 
-  if (json.containsKey("ClockMode")) // for what mode the tower lights are in
+  if (json.containsKey("clockMode")) // for what mode the tower lights are in
   {
-    if (strcmp(json["ClockMode"], "12") == 0)
+    if (strcmp(json["clockMode"], "12") == 0)
     {
       clockMode = PCF8523_12;
     }
-    else if (strcmp(json["ClockMode"], "24") == 0)
+    else if (strcmp(json["clockMode"], "24") == 0)
     {
       clockMode = PCF8523_24;
     }
@@ -302,13 +302,13 @@ void OXRS_SENSORS::conf(JsonVariant json)
     }
   }
 
-  if (json.containsKey("TempMode")) // for what mode the tower lights are in
+  if (json.containsKey("tempMode")) // for what mode the tower lights are in
   {
-    if (strcmp(json["TempMode"], "c") == 0)
+    if (strcmp(json["tempMode"], "c") == 0)
     {
       tempMode = TEMP_C;
     }
-    else if (strcmp(json["TempMode"], "f") == 0)
+    else if (strcmp(json["tempMode"], "f") == 0)
     {
       tempMode = TEMP_F;
     }
@@ -318,9 +318,9 @@ void OXRS_SENSORS::conf(JsonVariant json)
     }
   }
   
-  if (json.containsKey("sleepOLEDenable"))
+  if (json.containsKey("sleepOledenable"))
   {
-    _sleepEnable = json["sleepOLEDenable"].as<bool>() ? HIGH : LOW;
+    _sleepEnable = json["sleepOledenable"].as<bool>() ? HIGH : LOW;
   }
 
   if (json.containsKey("year")) // set RTC time
@@ -358,32 +358,32 @@ void OXRS_SENSORS::conf(JsonVariant json)
     } else{Serial.println(F("no RTC detected to update"));}
   }
 
-   if (json.containsKey("UpdateMillis")) // for updating i2c sensors
+   if (json.containsKey("updateMillis")) // for updating i2c sensors
    {
-     _UpdateMs = json["UpdateMillis"].as<uint32_t>();
+     _UpdateMs = json["updateMillis"].as<uint32_t>();
    }
 }
 
 void OXRS_SENSORS::cmnd(JsonVariant json)
 {
-  if (json.containsKey("ScreenMode")) // for what mode the OLED is in
+  if (json.containsKey("screenMode")) // for what mode the OLED is in
   {
-    if (strcmp(json["ScreenMode"], "off") == 0){_screenMode = OLED_MODE_OFF;}
-    if (strcmp(json["ScreenMode"], "one") == 0){_screenMode = OLED_MODE_ONE;}
-    if (strcmp(json["ScreenMode"], "two") == 0){_screenMode = OLED_MODE_TWO;}
-    if (strcmp(json["ScreenMode"], "three") == 0){_screenMode = OLED_MODE_THREE;}
-    if (strcmp(json["ScreenMode"], "four") == 0){_screenMode = OLED_MODE_FOUR;}
-    if (strcmp(json["ScreenMode"], "five") == 0){_screenMode = OLED_MODE_FIVE;} 
+    if (strcmp(json["screenMode"], "off") == 0){_screenMode = OLED_MODE_OFF;}
+    if (strcmp(json["screenMode"], "one") == 0){_screenMode = OLED_MODE_ONE;}
+    if (strcmp(json["screenMode"], "two") == 0){_screenMode = OLED_MODE_TWO;}
+    if (strcmp(json["screenMode"], "three") == 0){_screenMode = OLED_MODE_THREE;}
+    if (strcmp(json["screenMode"], "four") == 0){_screenMode = OLED_MODE_FOUR;}
+    if (strcmp(json["screenMode"], "five") == 0){_screenMode = OLED_MODE_FIVE;} 
   }
 
-  if (json.containsKey("OLEDone")) // custom text for OLED
+  if (json.containsKey("oneOLED")) // custom text for OLED
   {
-    _screenLineOne = json["OLEDone"].as<String>();
+    _screenLineOne = json["oneOLED"].as<String>();
   }
 
-  if (json.containsKey("OLEDtwo")) // custom text for OLED
+  if (json.containsKey("twoOLED")) // custom text for OLED
   {
-    _screenLineTwo = json["OLEDtwo"].as<String>();
+    _screenLineTwo = json["twoOLED"].as<String>();
   }
 
   if (json.containsKey("sleep"))
