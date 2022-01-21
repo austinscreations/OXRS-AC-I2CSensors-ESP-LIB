@@ -4,7 +4,7 @@
 #define FW_NAME       "OXRS-AC-SensorLibrary-ESP32-FW"
 #define FW_SHORT_NAME "Sensor Library"
 #define FW_MAKER      "Austin's Creations"
-#define FW_VERSION    "0.0.1"
+#define FW_VERSION    "0.0.2"
 
 /*--------------------------- Libraries ----------------------------------*/
 #include <SPI.h>                      // for ethernet
@@ -78,17 +78,17 @@ void setup() {
   Serial.println(F("========================================"));
 
   // starts up the i2c line and starts scanning / setting up sensors
-  sensor.startup(); // standard i2c GPIO
-//  sensor.startup(33,32); // LILYGO POE PWM Sheild - SDA / SCL GPIO values
-//  sensor.startup(4,0); // D1 Mini PWM module    - SDA / SCL GPIO values
+  sensor.begin(); // standard i2c GPIO
+//  sensor.begin(33,32); // LILYGO POE PWM Sheild - SDA / SCL GPIO values
+//  sensor.begin(4,0); // D1 Mini PWM module    - SDA / SCL GPIO values
 
-  sensor.OLED(); // start screen - starts with MAC address showing
+  sensor.oled(); // start screen - starts with MAC address showing
   
   byte mac[6];
   initialiseEthernet(mac);
 //  initialiseWifi(mac);
 
-  sensor.OLED(); // update screen - should show IP address
+  sensor.oled(); // update screen - should show IP address
 
   initialiseMqtt(mac);
 
@@ -106,7 +106,7 @@ void loop() {
 //  api.checkWifi(&client);
   
 
-  sensor.OLED(); // update screen (sleep state)
+  sensor.oled(); // update screen (sleep state)
   sensor.tele(); // updates the tele sensor data
 
 }
