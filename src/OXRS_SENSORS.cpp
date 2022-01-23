@@ -332,6 +332,14 @@ void OXRS_SENSORS::conf(JsonVariant json)
     _sleepEnable = json["sleepOledenable"].as<bool>() ? HIGH : LOW;
   }
 
+  if (json.containsKey("updateMillis")) // for updating i2c sensors
+  {
+    _updateMs = json["updateMillis"].as<uint32_t>();
+  }
+}
+
+void OXRS_SENSORS::cmnd(JsonVariant json)
+{
   if (json.containsKey("year")) // set RTC time
   {
     if (_rtcFound == true) // we have an RTC to update
@@ -362,14 +370,6 @@ void OXRS_SENSORS::conf(JsonVariant json)
     }
   }
 
-  if (json.containsKey("updateMillis")) // for updating i2c sensors
-  {
-    _updateMs = json["updateMillis"].as<uint32_t>();
-  }
-}
-
-void OXRS_SENSORS::cmnd(JsonVariant json)
-{
   if (json.containsKey("screenMode")) // for what mode the OLED is in
   {
     if (strcmp(json["screenMode"], "off") == 0)
