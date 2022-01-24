@@ -13,6 +13,8 @@ oled		KEYWORD2
 tele		KEYWORD2
 conf		KEYWORD2
 cmnd		KEYWORD2
+setConfigSchema		KEYWORD2
+setcommandSchema		KEYWORD2
 
 #######################################
 # Constants (LITERAL1)

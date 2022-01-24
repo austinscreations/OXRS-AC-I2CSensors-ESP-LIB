@@ -35,9 +35,7 @@ the core of the OXRS_SENSORS:
 
 // initialize the library instance
 // the only variable that may change is mqtt should you change the OXRS_MQTT initializer
-OXRS_SENSORS sensor(WiFi, ETH, mqtt);      // use this initializer when using ethernet on LilyGO POE
-OXRS_SENSORS sensor(WiFi, Ethernet, mqtt); // use this initializer when using ethernet
-OXRS_SENSORS sensor(WiFi, mqtt);           // use this initializer when using wifi
+OXRS_SENSORS sensor(mqtt);      
 
 // starts up the i2c line and starts scanning / setting up sensors
 sensor.begin();      // standard i2c GPIO
@@ -48,11 +46,23 @@ sensor.begin(4,0);   // D1 Mini PWM module    - SDA / SCL GPIO values
 // this is usually called before starting Ethernet or wifi - will start by showing mac address
 // called again after initializing internet connection will then update with IP address
 // then it should be call within your main loop to ensure it remains updated.
-sensor.oled(); 
+sensor.oled();                      // to update OLED
+sensor.oled(WiFi.macAddress(mac));  // to update OLED MAC address display
+sensor.oled(Ethernet.localIP());    // to update IP address on the display (wifi or ethernet)
 
 // for updating the sensors and sending their data via mqtt on the TELE topic
 // placed in main program loop
 sensor.tele(); // updates the tele sensor data
+
+// adds config schema for sensors library to the schema payload
+// placed after JsonObject properties = configSchema.createNestedObject("properties");
+// your device specific schema can be placed after
+sensor.setConfigSchema(properties);
+
+// adds command schema for sensors library to the schema payload
+// placed after JsonObject properties = commandSchema.createNestedObject("properties");
+// your device specific schema can be placed after
+sensor.setCommandSchema(properties);
 
 // checks and updates an config options
 // placed within void jsonConfig(JsonVariant json) of your main sketch
@@ -61,5 +71,7 @@ sensor.conf(json); // check if we have new config
 // checks and updates an command options
 // placed within void jsonCommand(JsonVariant json) of your main sketch
 sensor.cmnd(json); // check if we have new command
+
+
 
 ```

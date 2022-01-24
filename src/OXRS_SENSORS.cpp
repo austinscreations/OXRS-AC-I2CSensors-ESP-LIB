@@ -1,9 +1,6 @@
-// cpp file v0.2.0
+// cpp file v0.4.0
 
 #include "OXRS_SENSORS.h"
-
-// Pointer to the MQTT lib so we can get/set config
-// OXRS_MQTT * _sensorMqtt;
 
 // OLED display
 Adafruit_SSD1306 _display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -25,43 +22,10 @@ Adafruit_SHT4x _sht4 = Adafruit_SHT4x();
  *  Main program
  *
  */
-
-#if defined(ESP32)
-OXRS_SENSORS::OXRS_SENSORS(WiFiClass &wifi, OXRS_MQTT &mqtt)
+OXRS_SENSORS::OXRS_SENSORS(OXRS_MQTT &mqtt)
 {
-  _wifi32 = &wifi;
-  _ethernet = NULL;
-  _eth = NULL;
   _sensorMqtt = &mqtt;
 }
-OXRS_SENSORS::OXRS_SENSORS(WiFiClass &wifi, EthernetClass &ethernet, OXRS_MQTT &mqtt)
-{
-  _wifi32 = &wifi;
-  _ethernet = &ethernet;
-  _eth = NULL;
-  _sensorMqtt = &mqtt;
-}
-OXRS_SENSORS::OXRS_SENSORS(WiFiClass &wifi, ETHClass &eth, OXRS_MQTT &mqtt)
-{
-  _wifi32 = &wifi;
-  _ethernet = NULL;
-  _eth = &eth;
-  _sensorMqtt = &mqtt;
-}
-#elif defined(ESP8266)
-OXRS_SENSORS::OXRS_SENSORS(ESP8266WiFiClass &wifi, OXRS_MQTT &mqtt)
-{
-  _wifi8266 = &wifi;
-  _ethernet = NULL;
-  _sensorMqtt = &mqtt;
-}
-OXRS_SENSORS::OXRS_SENSORS(ESP8266WiFiClass &wifi, EthernetClass &ethernet, OXRS_MQTT &mqtt)
-{
-  _wifi8266 = &wifi;
-  _ethernet = &ethernet;
-  _sensorMqtt = &mqtt;
-}
-#endif
 
 void OXRS_SENSORS::begin()
 {
@@ -273,6 +237,97 @@ void OXRS_SENSORS::tele()
   }
 }
 
+void OXRS_SENSORS::setConfigSchema(JsonVariant json)
+{
+  JsonObject _tempMode = json.createNestedObject("tempMode");
+  _tempMode["type"] = "string";
+  JsonArray _tempEnum = _tempMode.createNestedArray("enum");
+  _tempEnum.add("c");
+  _tempEnum.add("f");
+  JsonArray _tempEnumNames = _tempMode.createNestedArray("enumNames");
+  _tempEnumNames.add("celcius");
+  _tempEnumNames.add("farenhite");
+
+  JsonObject _clockMode = json.createNestedObject("clockMode");
+  _clockMode["type"] = "string";
+  JsonArray _clockEnum = _clockMode.createNestedArray("enum");
+  _clockEnum.add("12");
+  _clockEnum.add("24");
+
+  JsonObject _updateMillis = json.createNestedObject("updateMillis");
+  _updateMillis["type"] = "integer";
+  _updateMillis["minimum"] = 0;
+
+  JsonObject _sleepOledenable = json.createNestedObject("sleepOledenable");
+  _sleepOledenable["type"] = "boolean";
+}
+
+void OXRS_SENSORS::setCommandSchema(JsonVariant json)
+{
+  JsonObject _rtcItems = json.createNestedObject("RTC");
+  _rtcItems["type"] = "array";
+
+  JsonObject _rtcItems2 = _rtcItems.createNestedObject("items");
+  _rtcItems2["type"] = "object";
+
+  JsonObject _rtcProperties = _rtcItems2.createNestedObject("properties");
+
+  JsonObject _rtcYear = _rtcProperties.createNestedObject("year");
+  _rtcYear["type"] = "string";
+
+  JsonObject _rtcMonth = _rtcProperties.createNestedObject("month");
+  _rtcMonth["type"] = "string";
+
+  JsonObject _rtcDay = _rtcProperties.createNestedObject("day");
+  _rtcDay["type"] = "string";
+
+  JsonObject _rtcHour = _rtcProperties.createNestedObject("hour");
+  _rtcHour["type"] = "string";
+  _rtcHour["description"] = "Requires 24 Hour Format";
+
+  JsonObject _rtcMinute = _rtcProperties.createNestedObject("minute");
+  _rtcMinute["type"] = "string";
+
+  JsonObject _rtcSeconds = _rtcProperties.createNestedObject("seconds");
+  _rtcSeconds["type"] = "string";
+
+  JsonArray _required = _rtcItems.createNestedArray("required");
+  _required.add("year");
+  _required.add("month");
+  _required.add("day");
+  _required.add("hour");
+  _required.add("minute");
+  _required.add("seconds");
+
+  JsonObject _screenMode = json.createNestedObject("screenMode");
+  _screenMode["type"] = "string";
+  JsonArray _screenEnum = _screenMode.createNestedArray("enum");
+  _screenEnum.add("off");
+  _screenEnum.add("one");
+  _screenEnum.add("two");
+  _screenEnum.add("three");
+  _screenEnum.add("four");
+  _screenEnum.add("five");
+  JsonArray _screenEnumNames = _screenMode.createNestedArray("enumNames");
+  _screenEnumNames.add("off");
+  _screenEnumNames.add("IP Address & MAC Address");
+  _screenEnumNames.add("Time & Temperature");
+  _screenEnumNames.add("LUX & Temperature");
+  _screenEnumNames.add("Humidity & Temperature");
+  _screenEnumNames.add("2 Lines of Custom Text");
+
+  JsonObject _oneOLED = json.createNestedObject("oneOLED");
+  _oneOLED["type"] = "string";
+  _oneOLED["maxLength"] = 10;
+
+  JsonObject _twoOLED = json.createNestedObject("twoOLED");
+  _twoOLED["type"] = "string";
+  _twoOLED["maxLength"] = 10;
+
+  JsonObject _sleeping = json.createNestedObject("sleep");
+  _sleeping["type"] = "boolean";
+}
+
 void OXRS_SENSORS::conf(JsonVariant json)
 {
   if (json.containsKey("screenMode")) // for what mode the OLED is in
@@ -340,33 +395,14 @@ void OXRS_SENSORS::conf(JsonVariant json)
 
 void OXRS_SENSORS::cmnd(JsonVariant json)
 {
-  if (json.containsKey("year")) // set RTC time
+  if (json.containsKey("RTC"))
   {
     if (_rtcFound == true) // we have an RTC to update
     {
-      if (!json.containsKey("month"))
+      for (JsonVariant RTC : json["RTC"].as<JsonArray>())
       {
-        return;
+        jsonRtcCommand(RTC);
       }
-      if (!json.containsKey("day"))
-      {
-        return;
-      }
-      if (!json.containsKey("hour"))
-      {
-        return;
-      }
-      if (!json.containsKey("minute"))
-      {
-        return;
-      }
-      if (!json.containsKey("seconds"))
-      {
-        return;
-      }
-      //      January 21, 2014 at 3am you would call:
-      //      rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
-      _rtc.adjust(DateTime(json["year"].as<uint16_t>(), json["month"].as<uint8_t>(), json["day"].as<uint8_t>(), json["hour"].as<uint8_t>(), json["minute"].as<uint8_t>(), json["seconds"].as<uint8_t>()));
     }
   }
 
@@ -414,6 +450,36 @@ void OXRS_SENSORS::cmnd(JsonVariant json)
     {
       _sleepState = json["sleep"].as<bool>() ? HIGH : LOW;
     }
+  }
+}
+
+void OXRS_SENSORS::jsonRtcCommand(JsonVariant json)
+{
+  if (json.containsKey("year")) // set RTC time
+  {
+    if (!json.containsKey("month"))
+    {
+      return;
+    }
+    if (!json.containsKey("day"))
+    {
+      return;
+    }
+    if (!json.containsKey("hour"))
+    {
+      return;
+    }
+    if (!json.containsKey("minute"))
+    {
+      return;
+    }
+    if (!json.containsKey("seconds"))
+    {
+      return;
+    }
+    //      January 21, 2014 at 3am you would call:
+    //      rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
+    _rtc.adjust(DateTime(json["year"].as<uint16_t>(), json["month"].as<uint8_t>(), json["day"].as<uint8_t>(), json["hour"].as<uint8_t>(), json["minute"].as<uint8_t>(), json["seconds"].as<uint8_t>()));
   }
 }
 
@@ -563,44 +629,14 @@ void OXRS_SENSORS::IP_screen() // line one showing IP address
 {
   _display.setTextSize(1);
   _display.setCursor(0, 0); // line 1
-
-#if defined(ESP32)
-  if (_ethernet && _wifi32)
-  {
-    _display.print(_ethernet->localIP());
-  }
-  else if (_eth && _wifi32)
-  {
-    _display.print(_eth->localIP());
-  }
-  else
-  {
-    _display.print(_wifi32->localIP());
-  }
-#elif defined(ESP8266)
-  if (_ethernet && _wifi8266)
-  {
-    _display.print(_ethernet->localIP());
-  }
-  else
-  {
-    _display.print(_wifi8266->localIP());
-  }
-#endif
+  _display.print(_ipAddress);
 }
 
 void OXRS_SENSORS::MAC_screen() // line two showing mac address
 {
   _display.setTextSize(1);
-  byte mac[6];
-#if defined(ESP32)
-  _wifi32->macAddress(mac);
-#elif defined(ESP8266)
-  _wifi8266->macAddress(mac);
-#endif
-  //  WiFi.macAddress(mac);
   char mac_display[18];
-  sprintf_P(mac_display, PSTR("%02X:%02X:%02X:%02X:%02X:%02X"), mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  sprintf_P(mac_display, PSTR("%02X:%02X:%02X:%02X:%02X:%02X"), _mac[0], _mac[1], _mac[2], _mac[3], _mac[4], _mac[5]);
   _display.setCursor(0, 16); // line 2
   _display.print(mac_display);
 }
@@ -609,85 +645,109 @@ void OXRS_SENSORS::oled() // control the OLED screen if availble
 {
   if (_oledFound == true)
   {
-    if ((millis() - _previousOledtemp) > OLED_INTERVAL_TEMP)
+    oledUpdate();
+  }
+}
+
+void OXRS_SENSORS::oled(byte *mac) // control the OLED screen if availble
+{
+  memcpy(_mac, mac, 6);
+
+  if (_oledFound == true)
+  {
+    oledUpdate();
+  }
+}
+
+void OXRS_SENSORS::oled(IPAddress ip) // control the OLED screen if availble
+{
+  _ipAddress = ip;
+  if (_oledFound == true)
+  {
+    oledUpdate();
+  }
+}
+
+void OXRS_SENSORS::oledUpdate() // control the OLED screen if availble
+{
+  if ((millis() - _previousOledtemp) > OLED_INTERVAL_TEMP)
+  {
+    if (_humsensorFound == true)
     {
-      if (_humsensorFound == true)
-      {
-        sensors_event_t humidity, temp;
-        _sht4.getEvent(&humidity, &temp); // populate temp and humidity objects with fresh data
+      sensors_event_t humidity, temp;
+      _sht4.getEvent(&humidity, &temp); // populate temp and humidity objects with fresh data
 
-        _c = temp.temperature;
-        _f = (temp.temperature * 1.8) + 32;
-        _h = humidity.relative_humidity;
-      }
-      if (_tempsensorFound == true && _humsensorFound == false)
-      {
-        _c = _tempSensor.readTempC();
-        _f = _tempSensor.readTempF();
-      }
-      // Reset our timer
-      _previousOledtemp = millis();
+      _c = temp.temperature;
+      _f = (temp.temperature * 1.8) + 32;
+      _h = humidity.relative_humidity;
     }
-
-    if ((millis() - _previousOledlux) > OLED_INTERVAL_LUX)
+    if (_tempsensorFound == true && _humsensorFound == false)
     {
-      if (_luxsensorFound == true && _luxSensor.hasValue() == true)
-      {
-        _l = _luxSensor.getLux();
-        _luxSensor.start(); // start the next reading
-        _previousOledlux = millis();
-      }
+      _c = _tempSensor.readTempC();
+      _f = _tempSensor.readTempF();
     }
+    // Reset our timer
+    _previousOledtemp = millis();
+  }
 
-    if (_rtcFound == true)
+  if ((millis() - _previousOledlux) > OLED_INTERVAL_LUX)
+  {
+    if (_luxsensorFound == true && _luxSensor.hasValue() == true)
     {
-      // Time Keeping
-      DateTime now = _rtc.now();
-      _currentHour = now.hour();
-      _currentMinute = now.minute();
+      _l = _luxSensor.getLux();
+      _luxSensor.start(); // start the next reading
+      _previousOledlux = millis();
     }
+  }
 
-    if (_sleepState == true) // screen goes to sleep
+  if (_rtcFound == true)
+  {
+    // Time Keeping
+    DateTime now = _rtc.now();
+    _currentHour = now.hour();
+    _currentMinute = now.minute();
+  }
+
+  if (_sleepState == true) // screen goes to sleep
+  {
+    off_screen();
+  }
+  else
+  {
+    _display.clearDisplay();
+    _display.setTextSize(2);
+    _display.setTextColor(WHITE);
+
+    if (_screenMode == OLED_MODE_OFF)
     {
       off_screen();
     }
-    else
+    if (_screenMode == OLED_MODE_ONE)
     {
-      _display.clearDisplay();
-      _display.setTextSize(2);
-      _display.setTextColor(WHITE);
-
-      if (_screenMode == OLED_MODE_OFF)
-      {
-        off_screen();
-      }
-      if (_screenMode == OLED_MODE_ONE)
-      {
-        IP_screen();
-        MAC_screen();
-      }
-      if (_screenMode == OLED_MODE_TWO)
-      {
-        time_screen();
-        temp_screen();
-      }
-      if (_screenMode == OLED_MODE_THREE)
-      {
-        lux_screen();
-        temp_screen();
-      }
-      if (_screenMode == OLED_MODE_FOUR)
-      {
-        hum_screen();
-        temp_screen();
-      }
-      if (_screenMode == OLED_MODE_FIVE)
-      {
-        one_screen();
-        two_screen();
-      }
-
-      _display.display();
+      IP_screen();
+      MAC_screen();
     }
+    if (_screenMode == OLED_MODE_TWO)
+    {
+      time_screen();
+      temp_screen();
+    }
+    if (_screenMode == OLED_MODE_THREE)
+    {
+      lux_screen();
+      temp_screen();
+    }
+    if (_screenMode == OLED_MODE_FOUR)
+    {
+      hum_screen();
+      temp_screen();
+    }
+    if (_screenMode == OLED_MODE_FIVE)
+    {
+      one_screen();
+      two_screen();
+    }
+
+    _display.display();
   }
 }

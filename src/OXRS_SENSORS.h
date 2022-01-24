@@ -1,4 +1,4 @@
-// h file v0.2.0
+// h file v0.4.0
 
 #ifndef OXRS_SENSORS_H
 #define OXRS_SENSORS_H
@@ -66,33 +66,28 @@
 class OXRS_SENSORS
 {
 public:
-#if defined(ESP32)
-  OXRS_SENSORS(WiFiClass &wifi, OXRS_MQTT &mqtt);
-  OXRS_SENSORS(WiFiClass &wifi, EthernetClass &ethernet, OXRS_MQTT &mqtt);
-  OXRS_SENSORS(WiFiClass &wifi, ETHClass &eth, OXRS_MQTT &mqtt);
-#elif defined(ESP8266)
-  OXRS_SENSORS(ESP8266WiFiClass &wifi, OXRS_MQTT &mqtt);
-  OXRS_SENSORS(ESP8266WiFiClass &wifi, EthernetClass &ethernet, OXRS_MQTT &mqtt);
-#endif
+  OXRS_SENSORS(OXRS_MQTT &mqtt);
 
   void begin();
   void begin(uint8_t pin_sda, uint8_t pin_scl);
 
   void oled();
+  void oled(IPAddress ip);
+  void oled(byte * mac);
 
   void tele();
 
   void conf(JsonVariant json);
   void cmnd(JsonVariant json);
 
+  void setConfigSchema(JsonVariant json);
+  void setCommandSchema(JsonVariant json);
+
 private:
-  EthernetClass *_ethernet;
-#if defined(ESP32)
-  ETHClass *_eth;
-  WiFiClass *_wifi32;
-#elif defined(ESP8266)
-  ESP8266WiFiClass *_wifi8266;
-#endif
+
+  IPAddress _ipAddress;
+
+  byte _mac[6];
 
   OXRS_MQTT *_sensorMqtt;
 
@@ -137,6 +132,8 @@ private:
   int _currentMinute;
   uint8_t _clockMode = PCF8523_24;
 
+  void jsonRtcCommand(JsonVariant json);
+
   void scanI2CBus();
 
   void off_screen();
@@ -148,6 +145,7 @@ private:
   void lux_screen();
   void IP_screen();
   void MAC_screen();
+  void oledUpdate();
 };
 
 #endif

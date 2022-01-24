@@ -1,19 +1,19 @@
 
 
 /*--------------------------- Version ------------------------------------*/
-#define FW_NAME       "OXRS-AC-SensorLibrary-ESP8266-FW"
+#define FW_NAME "OXRS-AC-SensorLibrary-ESP8266-FW"
 #define FW_SHORT_NAME "Sensor Library"
-#define FW_MAKER      "Austin's Creations"
-#define FW_VERSION    "0.0.2"
+#define FW_MAKER "Austin's Creations"
+#define FW_VERSION "0.0.4"
 
 /*--------------------------- Libraries ----------------------------------*/
-#include <SPI.h>                      // for ethernet
-#include <Ethernet.h>                 // for ethernet
-#include <ESP8266WiFi.h>              // For networking
-#include <PubSubClient.h>             // For MQTT
-#include <OXRS_MQTT.h>                // For MQTT
-#include <OXRS_API.h>                 // For REST API
-#include <OXRS_SENSORS.h>             // for Qwiic i2c sensors
+#include <SPI.h>          // for ethernet
+#include <Ethernet.h>     // for ethernet
+#include <ESP8266WiFi.h>  // For networking
+#include <PubSubClient.h> // For MQTT
+#include <OXRS_MQTT.h>    // For MQTT
+#include <OXRS_API.h>     // For REST API
+#include <OXRS_SENSORS.h> // for Qwiic i2c sensors
 
 /*--------------------------- Configuration ------------------------------*/
 // Should be no user configuration in this file, everything should be in;
@@ -21,26 +21,23 @@
 
 /*--------------------------- Constants ----------------------------------*/
 // Serial
-#define       SERIAL_BAUD_RATE          115200
+#define SERIAL_BAUD_RATE 115200
 
 // REST API
-#define       REST_API_PORT             80
+#define REST_API_PORT 80
 
 // MQTT
-#define       MQTT_MAX_MESSAGE_SIZE     4096
+#define MQTT_MAX_MESSAGE_SIZE 4096
 
 // REST API
-#define       REST_API_PORT             80
-
+#define REST_API_PORT 80
 
 /*--------------------------- Global Variables ---------------------------*/
-
-
 
 /*--------------------------- Instantiate Global Objects -----------------*/
 // client
 EthernetClient client;
-//WiFiClient client;
+// WiFiClient client;
 
 // MQTT client
 PubSubClient mqttClient(client);
@@ -48,101 +45,103 @@ OXRS_MQTT mqtt(mqttClient);
 
 // REST API
 EthernetServer server(REST_API_PORT);
-//WiFiServer server(REST_API_PORT);
+// WiFiServer server(REST_API_PORT);
 OXRS_API api(mqtt);
 
-  OXRS_SENSORS sensor(WiFi, Ethernet, mqtt);
-//  OXRS_SENSORS sensor(WiFi, mqtt);
-
+OXRS_SENSORS sensor(mqtt);
 
 /*--------------------------- Program ------------------------------------*/
-void mqttCallback(char * topic, uint8_t * payload, unsigned int length) 
+void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
 {
   // Pass this message down to our MQTT handler
   mqtt.receive(topic, payload, length);
 }
 
-
 /**
   Setup
 */
-void setup() {
+void setup()
+{
   Ethernet.init(15);
- // Startup logging to serial
+  // Startup logging to serial
   Serial.begin(SERIAL_BAUD_RATE);
   Serial.println("/n");
   Serial.println(F("========================================"));
-  Serial.print  (F("FIRMWARE: ")); Serial.println(FW_NAME);
-  Serial.print  (F("MAKER:    ")); Serial.println(FW_MAKER);
-  Serial.print  (F("VERSION:  ")); Serial.println(FW_VERSION);
+  Serial.print(F("FIRMWARE: "));
+  Serial.println(FW_NAME);
+  Serial.print(F("MAKER:    "));
+  Serial.println(FW_MAKER);
+  Serial.print(F("VERSION:  "));
+  Serial.println(FW_VERSION);
   Serial.println(F("========================================"));
 
   // starts up the i2c line and starts scanning / setting up sensors
   sensor.begin(); // standard i2c GPIO
-//  sensor.begin(33,32); // LILYGO POE PWM Sheild - SDA / SCL GPIO values
-//  sensor.begin(4,0); // D1 Mini PWM module    - SDA / SCL GPIO values
+                  //  sensor.begin(33,32); // LILYGO POE PWM Sheild - SDA / SCL GPIO values
+                  //  sensor.begin(4,0); // D1 Mini PWM module    - SDA / SCL GPIO values
 
-  sensor.oled(); // start screen - starts with MAC address showing
-  
   byte mac[6];
-  initialiseEthernet(mac);
-//  initialiseWifi(mac);
 
-  sensor.oled(); // update screen - should show IP address
+  sensor.oled(WiFi.macAddress(mac)); // start screen - starts with MAC address showing
+
+  initialiseEthernet(mac);
+  //  initialiseWifi(mac);
+
+  sensor.oled(Ethernet.localIP()); // update screen - should show IP address
+  // sensor.oled(WiFi.localIP()); // update screen - should show IP address
 
   initialiseMqtt(mac);
 
   initialiseRestApi();
-  
 }
 
-void loop() {
+void loop()
+{
   ethernet_loop();
   mqtt.loop();
 
   EthernetClient client = server.available();
   api.checkEthernet(&client);
-//  WiFiClient client = server.available();
-//  api.checkWifi(&client);
-  
+  //  WiFiClient client = server.available();
+  //  api.checkWifi(&client);
 
   sensor.oled(); // update screen (sleep state)
   sensor.tele(); // updates the tele sensor data
-
 }
 
 void ethernet_loop()
 {
-  switch (Ethernet.maintain()) {
-    case 1:
-      //renewed fail
-      Serial.println("Error: renewed fail");
-      break;
+  switch (Ethernet.maintain())
+  {
+  case 1:
+    // renewed fail
+    Serial.println("Error: renewed fail");
+    break;
 
-    case 2:
-      //renewed success
-      Serial.println("Renewed success");
-      //print your local IP address:
-      Serial.print("My IP address: ");
-      Serial.println(Ethernet.localIP());
-      break;
+  case 2:
+    // renewed success
+    Serial.println("Renewed success");
+    // print your local IP address:
+    Serial.print("My IP address: ");
+    Serial.println(Ethernet.localIP());
+    break;
 
-    case 3:
-      //rebind fail
-      Serial.println("Error: rebind fail");
-      break;
+  case 3:
+    // rebind fail
+    Serial.println("Error: rebind fail");
+    break;
 
-    case 4:
-      //rebind success
-      Serial.println("Rebind success");
-      //print your local IP address:
-      Serial.print("My IP address: ");
-      Serial.println(Ethernet.localIP());
-      break;
+  case 4:
+    // rebind success
+    Serial.println("Rebind success");
+    // print your local IP address:
+    Serial.print("My IP address: ");
+    Serial.println(Ethernet.localIP());
+    break;
 
-    default:
-      //nothing happened
-      break;
+  default:
+    // nothing happened
+    break;
   }
 }
 
@@ -163,7 +162,7 @@ void getNetworkJson(JsonVariant json)
 {
   byte mac[6];
   WiFi.macAddress(mac);
-  
+
   char mac_display[18];
   sprintf_P(mac_display, PSTR("%02X:%02X:%02X:%02X:%02X:%02X"), mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
@@ -176,30 +175,53 @@ void getNetworkJson(JsonVariant json)
 void getConfigSchemaJson(JsonVariant json)
 {
   JsonObject configSchema = json.createNestedObject("configSchema");
-  
+
   // Config schema metadata
-  configSchema["$schema"] = "http://json-schema.org/draft-04/schema#";
+  configSchema["$schema"] = "http://json-schema.org/draft-07/schema#";
   configSchema["title"] = FW_NAME;
   configSchema["type"] = "object";
+
+  JsonObject properties = configSchema.createNestedObject("properties");
+
+  sensor.setConfigSchema(properties);
 }
 
 void getCommandSchemaJson(JsonVariant json)
 {
   JsonObject commandSchema = json.createNestedObject("commandSchema");
-  
+
   // Command schema metadata
-  commandSchema["$schema"] = "http://json-schema.org/draft-04/schema#";
+  commandSchema["$schema"] = "http://json-schema.org/draft-07/schema#";
   commandSchema["title"] = FW_NAME;
   commandSchema["type"] = "object";
+
+  JsonObject properties = commandSchema.createNestedObject("properties");
+
+  sensor.setCommandSchema(properties);
 }
 
-void mqttConnected() 
+/**
+  API callbacks
+*/
+void apiAdopt(JsonVariant json)
+{
+  // Build device adoption info
+  getFirmwareJson(json);
+  getNetworkJson(json);
+  getConfigSchemaJson(json);
+  getCommandSchemaJson(json);
+}
+
+/**
+  MQTT callbacks
+*/
+void mqttConnected()
 {
   // Build device adoption info
   DynamicJsonDocument json(4096);
 
   JsonVariant adopt = json.as<JsonVariant>();
-  
+
   getFirmwareJson(adopt);
   getNetworkJson(adopt);
   getConfigSchemaJson(adopt);
@@ -212,39 +234,39 @@ void mqttConnected()
   Serial.println("mqtt connected");
 }
 
-void mqttDisconnected(int state) 
+void mqttDisconnected(int state)
 {
   // Log the disconnect reason
   // See https://github.com/knolleary/pubsubclient/blob/2d228f2f862a95846c65a8518c79f48dfc8f188c/src/PubSubClient.h#L44
   switch (state)
   {
-    case MQTT_CONNECTION_TIMEOUT:
-      Serial.println(F("mqtt connection timeout"));
-      break;
-    case MQTT_CONNECTION_LOST:
-      Serial.println(F("mqtt connection lost"));
-      break;
-    case MQTT_CONNECT_FAILED:
-      Serial.println(F("mqtt connect failed"));
-      break;
-    case MQTT_DISCONNECTED:
-      Serial.println(F("mqtt disconnected"));
-      break;
-    case MQTT_CONNECT_BAD_PROTOCOL:
-      Serial.println(F("mqtt bad protocol"));
-      break;
-    case MQTT_CONNECT_BAD_CLIENT_ID:
-      Serial.println(F("mqtt bad client id"));
-      break;
-    case MQTT_CONNECT_UNAVAILABLE:
-      Serial.println(F("mqtt unavailable"));
-      break;
-    case MQTT_CONNECT_BAD_CREDENTIALS:
-      Serial.println(F("mqtt bad credentials"));
-      break;      
-    case MQTT_CONNECT_UNAUTHORIZED:
-      Serial.println(F("mqtt unauthorised"));
-      break;      
+  case MQTT_CONNECTION_TIMEOUT:
+    Serial.println(F("mqtt connection timeout"));
+    break;
+  case MQTT_CONNECTION_LOST:
+    Serial.println(F("mqtt connection lost"));
+    break;
+  case MQTT_CONNECT_FAILED:
+    Serial.println(F("mqtt connect failed"));
+    break;
+  case MQTT_DISCONNECTED:
+    Serial.println(F("mqtt disconnected"));
+    break;
+  case MQTT_CONNECT_BAD_PROTOCOL:
+    Serial.println(F("mqtt bad protocol"));
+    break;
+  case MQTT_CONNECT_BAD_CLIENT_ID:
+    Serial.println(F("mqtt bad client id"));
+    break;
+  case MQTT_CONNECT_UNAVAILABLE:
+    Serial.println(F("mqtt unavailable"));
+    break;
+  case MQTT_CONNECT_BAD_CREDENTIALS:
+    Serial.println(F("mqtt bad credentials"));
+    break;
+  case MQTT_CONNECT_UNAUTHORIZED:
+    Serial.println(F("mqtt unauthorised"));
+    break;
   }
 }
 
@@ -254,25 +276,19 @@ void jsonConfig(JsonVariant json) // config payload
 }
 
 void jsonCommand(JsonVariant json) // do something payloads
-{  
+{
   sensor.cmnd(json); // check if we have new command
-  
+
   if (json.containsKey("restart") && json["restart"].as<bool>())
   {
     ESP.restart();
   }
 }
 
-
-
-
-
-
-
 /*
  WIFI
  */
-void initialiseWifi(byte * mac)
+void initialiseWifi(byte *mac)
 {
   // Determine MAC address
   WiFi.macAddress(mac);
@@ -281,14 +297,15 @@ void initialiseWifi(byte * mac)
   char mac_display[18];
   sprintf_P(mac_display, PSTR("%02X:%02X:%02X:%02X:%02X:%02X"), mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
   Serial.print(F("mac address: "));
-  Serial.println(mac_display);  
+  Serial.println(mac_display);
 
   // Connect to WiFi
   Serial.print(F("connecting to "));
   Serial.print(WIFI_SSID);
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  while (WiFi.status() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED)
+  {
     delay(500);
     Serial.print(F("."));
   }
@@ -298,7 +315,7 @@ void initialiseWifi(byte * mac)
   Serial.println(WiFi.localIP());
 }
 
-void initialiseEthernet(byte * mac)
+void initialiseEthernet(byte *mac)
 {
   // Determine MAC address
   WiFi.macAddress(mac);
@@ -307,18 +324,23 @@ void initialiseEthernet(byte * mac)
   char mac_display[18];
   sprintf_P(mac_display, PSTR("%02X:%02X:%02X:%02X:%02X:%02X"), mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
   Serial.print(F("mac address: "));
-  Serial.println(mac_display);  
+  Serial.println(mac_display);
 
   Serial.println("Initialize Ethernet with DHCP:");
-  if (Ethernet.begin(mac) == 0) {
+  if (Ethernet.begin(mac) == 0)
+  {
     Serial.println("Failed to configure Ethernet using DHCP");
-    if (Ethernet.hardwareStatus() == EthernetNoHardware) {
+    if (Ethernet.hardwareStatus() == EthernetNoHardware)
+    {
       Serial.println("Ethernet shield was not found.  Sorry, can't run without hardware. :(");
-    } else if (Ethernet.linkStatus() == LinkOFF) {
+    }
+    else if (Ethernet.linkStatus() == LinkOFF)
+    {
       Serial.println("Ethernet cable is not connected.");
     }
     // no point in carrying on, so do nothing forevermore:
-    while (true) {
+    while (true)
+    {
       delay(1);
     }
   }
@@ -331,23 +353,22 @@ void initialiseEthernet(byte * mac)
 /*
  MQTT
  */
-void initialiseMqtt(byte * mac)
+void initialiseMqtt(byte *mac)
 {
   // Set the default client id to the last 3 bytes of the MAC address
   char clientId[32];
-  sprintf_P(clientId, PSTR("%02x%02x%02x"), mac[3], mac[4], mac[5]);  
+  sprintf_P(clientId, PSTR("%02x%02x%02x"), mac[3], mac[4], mac[5]);
   mqtt.setClientId(clientId);
-  
+
   // Register our callbacks
   mqtt.onConnected(mqttConnected);
   mqtt.onDisconnected(mqttDisconnected);
   mqtt.onConfig(jsonConfig);
-  mqtt.onCommand(jsonCommand);  
+  mqtt.onCommand(jsonCommand);
 
   // Start listening for MQTT messages
-  mqttClient.setCallback(mqttCallback);  
+  mqttClient.setCallback(mqttCallback);
 }
-
 
 void initialiseRestApi(void)
 {
@@ -357,7 +378,9 @@ void initialiseRestApi(void)
 
   // Set up the REST API
   api.begin();
-  api.setFirmware(FW_NAME, FW_SHORT_NAME, FW_MAKER, FW_VERSION);
+
+  // Register our callbacks
+  api.onAdopt(apiAdopt);
 
   server.begin();
 }
