@@ -291,7 +291,7 @@ void OXRS_SENSORS::setCommandSchema(JsonVariant json)
   JsonObject _rtcSeconds = _rtcProperties.createNestedObject("seconds");
   _rtcSeconds["type"] = "string";
 
-  JsonArray _required = _rtcItems.createNestedArray("required");
+  JsonArray _required = _rtcItems2.createNestedArray("required");
   _required.add("year");
   _required.add("month");
   _required.add("day");
