@@ -1,4 +1,4 @@
-// cpp file v0.4.0
+// cpp file v0.4.1
 
 #include "OXRS_SENSORS.h"
 
@@ -239,90 +239,140 @@ void OXRS_SENSORS::tele()
 
 void OXRS_SENSORS::setConfigSchema(JsonVariant json)
 {
-  JsonObject _tempMode = json.createNestedObject("tempMode");
-  _tempMode["type"] = "string";
-  JsonArray _tempEnum = _tempMode.createNestedArray("enum");
-  _tempEnum.add("c");
-  _tempEnum.add("f");
-  JsonArray _tempEnumNames = _tempMode.createNestedArray("enumNames");
-  _tempEnumNames.add("celcius");
-  _tempEnumNames.add("farenhite");
+  if (_tempsensorFound == false && _humsensorFound == false)
+  {
+    // do nothing - no temp value available to control
+  }
+  else
+  {
+    JsonObject _tempMode = json.createNestedObject("tempMode");
+    _tempMode["type"] = "string";
+    JsonArray _tempEnum = _tempMode.createNestedArray("enum");
+    _tempEnum.add("c");
+    _tempEnum.add("f");
+    JsonArray _tempEnumNames = _tempMode.createNestedArray("enumNames");
+    _tempEnumNames.add("celcius");
+    _tempEnumNames.add("farenhite");
+  }
 
-  JsonObject _clockMode = json.createNestedObject("clockMode");
-  _clockMode["type"] = "string";
-  JsonArray _clockEnum = _clockMode.createNestedArray("enum");
-  _clockEnum.add("12");
-  _clockEnum.add("24");
+  if (_rtcFound == true)
+  {
+    JsonObject _clockMode = json.createNestedObject("clockMode");
+    _clockMode["type"] = "string";
+    JsonArray _clockEnum = _clockMode.createNestedArray("enum");
+    _clockEnum.add("12");
+    _clockEnum.add("24");
+  }
 
   JsonObject _updateMillis = json.createNestedObject("updateMillis");
   _updateMillis["type"] = "integer";
   _updateMillis["minimum"] = 0;
 
-  JsonObject _sleepOledenable = json.createNestedObject("sleepOledenable");
-  _sleepOledenable["type"] = "boolean";
+  if (_oledFound == true)
+  {
+    JsonObject _sleepOledenable = json.createNestedObject("sleepOledenable");
+    _sleepOledenable["type"] = "boolean";
+  }
 }
 
 void OXRS_SENSORS::setCommandSchema(JsonVariant json)
 {
-  JsonObject _rtcItems = json.createNestedObject("RTC");
-  _rtcItems["type"] = "array";
 
-  JsonObject _rtcItems2 = _rtcItems.createNestedObject("items");
-  _rtcItems2["type"] = "object";
+  if (_rtcFound == true)
+  {
+    JsonObject _rtcItems = json.createNestedObject("RTC");
+    _rtcItems["type"] = "array";
 
-  JsonObject _rtcProperties = _rtcItems2.createNestedObject("properties");
+    JsonObject _rtcItems2 = _rtcItems.createNestedObject("items");
+    _rtcItems2["type"] = "object";
 
-  JsonObject _rtcYear = _rtcProperties.createNestedObject("year");
-  _rtcYear["type"] = "string";
+    JsonObject _rtcProperties = _rtcItems2.createNestedObject("properties");
 
-  JsonObject _rtcMonth = _rtcProperties.createNestedObject("month");
-  _rtcMonth["type"] = "string";
+    JsonObject _rtcYear = _rtcProperties.createNestedObject("year");
+    _rtcYear["type"] = "string";
 
-  JsonObject _rtcDay = _rtcProperties.createNestedObject("day");
-  _rtcDay["type"] = "string";
+    JsonObject _rtcMonth = _rtcProperties.createNestedObject("month");
+    _rtcMonth["type"] = "string";
 
-  JsonObject _rtcHour = _rtcProperties.createNestedObject("hour");
-  _rtcHour["type"] = "string";
-  _rtcHour["description"] = "Requires 24 Hour Format";
+    JsonObject _rtcDay = _rtcProperties.createNestedObject("day");
+    _rtcDay["type"] = "string";
 
-  JsonObject _rtcMinute = _rtcProperties.createNestedObject("minute");
-  _rtcMinute["type"] = "string";
+    JsonObject _rtcHour = _rtcProperties.createNestedObject("hour");
+    _rtcHour["type"] = "string";
+    _rtcHour["description"] = "Requires 24 Hour Format";
 
-  JsonObject _rtcSeconds = _rtcProperties.createNestedObject("seconds");
-  _rtcSeconds["type"] = "string";
+    JsonObject _rtcMinute = _rtcProperties.createNestedObject("minute");
+    _rtcMinute["type"] = "string";
 
-  JsonArray _required = _rtcItems2.createNestedArray("required");
-  _required.add("year");
-  _required.add("month");
-  _required.add("day");
-  _required.add("hour");
-  _required.add("minute");
-  _required.add("seconds");
+    JsonObject _rtcSeconds = _rtcProperties.createNestedObject("seconds");
+    _rtcSeconds["type"] = "string";
 
-  JsonObject _screenMode = json.createNestedObject("screenMode");
-  _screenMode["type"] = "string";
-  JsonArray _screenEnum = _screenMode.createNestedArray("enum");
-  _screenEnum.add("off");
-  _screenEnum.add("one");
-  _screenEnum.add("two");
-  _screenEnum.add("three");
-  _screenEnum.add("four");
-  _screenEnum.add("five");
-  JsonArray _screenEnumNames = _screenMode.createNestedArray("enumNames");
-  _screenEnumNames.add("off");
-  _screenEnumNames.add("IP Address & MAC Address");
-  _screenEnumNames.add("Time & Temperature");
-  _screenEnumNames.add("LUX & Temperature");
-  _screenEnumNames.add("Humidity & Temperature");
-  _screenEnumNames.add("2 Lines of Custom Text");
+    JsonArray _required = _rtcItems2.createNestedArray("required");
+    _required.add("year");
+    _required.add("month");
+    _required.add("day");
+    _required.add("hour");
+    _required.add("minute");
+    _required.add("seconds");
+  }
 
-  JsonObject _oneOLED = json.createNestedObject("oneOLED");
-  _oneOLED["type"] = "string";
-  _oneOLED["maxLength"] = 10;
+  if (_oledFound == true)
+  {
+    JsonObject _screenMode = json.createNestedObject("screenMode");
+    _screenMode["type"] = "string";
+    JsonArray _screenEnum = _screenMode.createNestedArray("enum");
+    _screenEnum.add("off");
+    _screenEnum.add("one");
+    if (_rtcFound == false && _tempsensorFound && _humsensorFound == false)
+    {
+    }
+    else
+    {
+      _screenEnum.add("two");
+    }
+    if (_luxsensorFound == false && _tempsensorFound == false && _humsensorFound == false)
+    {
+    }
+    else
+    {
+      _screenEnum.add("three");
+    }
+    if (_humsensorFound == true)
+    {
+      _screenEnum.add("four");
+    }
+    _screenEnum.add("five");
+    JsonArray _screenEnumNames = _screenMode.createNestedArray("enumNames");
+    _screenEnumNames.add("off");
+    _screenEnumNames.add("IP Address & MAC Address");
+    if (_rtcFound == false && _tempsensorFound && _humsensorFound == false)
+    {
+    }
+    else
+    {
+      _screenEnumNames.add("Time & Temperature");
+    }
+    if (_luxsensorFound == false && _tempsensorFound == false && _humsensorFound == false)
+    {
+    }
+    else
+    {
+      _screenEnumNames.add("LUX & Temperature");
+    }
+    if (_humsensorFound == true)
+    {
+      _screenEnumNames.add("Humidity & Temperature");
+    }
+    _screenEnumNames.add("2 Lines of Custom Text");
 
-  JsonObject _twoOLED = json.createNestedObject("twoOLED");
-  _twoOLED["type"] = "string";
-  _twoOLED["maxLength"] = 10;
+    JsonObject _oneOLED = json.createNestedObject("oneOLED");
+    _oneOLED["type"] = "string";
+    _oneOLED["maxLength"] = 10;
+
+    JsonObject _twoOLED = json.createNestedObject("twoOLED");
+    _twoOLED["type"] = "string";
+    _twoOLED["maxLength"] = 10;
+  }
 
   JsonObject _sleeping = json.createNestedObject("sleep");
   _sleeping["type"] = "boolean";
