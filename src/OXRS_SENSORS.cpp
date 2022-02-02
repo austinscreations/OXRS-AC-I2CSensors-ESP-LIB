@@ -229,9 +229,12 @@ void OXRS_SENSORS::tele()
 
 void OXRS_SENSORS::setConfigSchema(JsonVariant json)
 {
-  JsonObject _updateMillis = json.createNestedObject("sensorUpdateMillis");
-  _updateMillis["type"] = "integer";
-  _updateMillis["minimum"] = 0;
+  JsonObject _updateSeconds = json.createNestedObject("sensorUpdateSeconds");
+  _updateSeconds["title"] = "Sensor Update Interval (seconds)";
+  _updateSeconds["description"] = "How often to read and report the values from the connected I2C sensors  (defaults to 60 seconds, setting to 0 disables sensor reports). Must be a number between 0 and 86400 (i.e. 1 day).";
+  _updateSeconds["type"] = "integer";
+  _updateSeconds["minimum"] = 0;
+  _updateSeconds["maximum"] = 86400;
 
   if (_mcp9808Found || _sht40Found)
   {
@@ -365,9 +368,9 @@ void OXRS_SENSORS::setCommandSchema(JsonVariant json)
 
 void OXRS_SENSORS::conf(JsonVariant json)
 {
-  if (json.containsKey("sensorUpdateMillis"))
+  if (json.containsKey("sensorUpdateSeconds"))
   {
-    _updateMs = json["sensorUpdateMillis"].as<uint32_t>();
+    _updateMs = json["sensorUpdateSeconds"].as<uint32_t>() * 1000L;
   }
 
   if (json.containsKey("sensorScreenMode")) // for what mode the OLED is in
