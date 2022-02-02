@@ -37,6 +37,11 @@ The core of OXRS_SENSORS:
 // the only variable that may change is mqtt should you change the OXRS_MQTT initializer
 OXRS_SENSORS sensors(mqtt);      
 
+Wire.begin(); // needs to be called before starting the sensors
+Wire.begin(SDA,SCL); // for instanaces where different I2C pins are used
+// 33,32 are used on LilyGO sheild
+// 4,0   are used on D1 Mini PWM
+
 // starts scanning / setting up sensors
 sensors.begin();
 
