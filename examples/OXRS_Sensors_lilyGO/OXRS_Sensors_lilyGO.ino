@@ -141,9 +141,10 @@ void setup()
   Serial.println(F("========================================"));
 
   // starts up the i2c line and starts scanning / setting up sensors
-  sensor.begin(); // standard i2c GPIO
-                  //  sensor.begin(33,32); // LILYGO POE PWM Sheild - SDA / SCL GPIO values
-                  //  sensor.begin(4,0); // D1 Mini PWM module    - SDA / SCL GPIO values
+  // Wire.begin();
+  Wire.Begin(33,32);
+  
+  sensor.begin(); // start the sensors
 
   byte mac[6];
 
