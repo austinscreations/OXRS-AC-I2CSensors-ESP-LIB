@@ -3,19 +3,19 @@
 #include "OXRS_SENSORS.h"
 
 // OLED display
-Adafruit_SSD1306 _display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+Adafruit_SSD1306 _ssd1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // PCF8523 RTC
-RTC_PCF8523 _rtc;
+RTC_PCF8523 _pcf8523;
 
 // MCP9808 temp sensor
-Adafruit_MCP9808 _tempSensor = Adafruit_MCP9808();
+Adafruit_MCP9808 _mcp9808 = Adafruit_MCP9808();
 
 // BH1750 lux sensor
-hp_BH1750 _luxSensor;
+BH1750 _bh1750;
 
 // SHT40 Temperature / Humitity Sensor
-Adafruit_SHT4x _sht4 = Adafruit_SHT4x();
+Adafruit_SHT4x _sht40 = Adafruit_SHT4x();
 
 /*
  *
@@ -29,13 +29,6 @@ OXRS_SENSORS::OXRS_SENSORS(OXRS_MQTT &mqtt)
 
 void OXRS_SENSORS::begin()
 {
-  Wire.begin();
-  scanI2CBus();
-}
-
-void OXRS_SENSORS::begin(uint8_t pin_sda, uint8_t pin_scl)
-{
-  Wire.begin(pin_sda, pin_scl);
   scanI2CBus();
 }
 
@@ -50,14 +43,12 @@ void OXRS_SENSORS::scanI2CBus()
   Wire.beginTransmission(BH1750_I2C_ADDRESS);
   if (Wire.endTransmission() == 0)
   {
-    _luxsensorFound = _luxSensor.begin(BH1750_TO_GROUND);
-    if (!_luxsensorFound)
+    _bh1750Found = _bh1750.begin(BH1750::CONTINUOUS_HIGH_RES_MODE);
+    if (!_bh1750Found)
     {
       return;
     }
     Serial.println(F("BH1750"));
-    _luxSensor.start(); // start getting value (for non-blocking use)
-    _sensorFound = true;
   }
   else
   {
@@ -71,15 +62,14 @@ void OXRS_SENSORS::scanI2CBus()
   Wire.beginTransmission(SHT40_I2C_ADDRESS);
   if (Wire.endTransmission() == 0)
   {
-    _humsensorFound = _sht4.begin();
-    if (!_humsensorFound)
+    _sht40Found = _sht40.begin();
+    if (!_sht40Found)
     {
       return;
     }
     Serial.println(F("SHT40"));
-    _sht4.setPrecision(SHT4X_MED_PRECISION);
-    _sht4.setHeater(SHT4X_NO_HEATER);
-    _sensorFound = true;
+    _sht40.setPrecision(SHT4X_MED_PRECISION);
+    _sht40.setHeater(SHT4X_NO_HEATER);
   }
   else
   {
@@ -92,16 +82,15 @@ void OXRS_SENSORS::scanI2CBus()
   Wire.beginTransmission(MCP9808_I2C_ADDRESS);
   if (Wire.endTransmission() == 0)
   {
-    _tempsensorFound = _tempSensor.begin(MCP9808_I2C_ADDRESS);
-    if (!_tempsensorFound)
+    _mcp9808Found = _mcp9808.begin(MCP9808_I2C_ADDRESS);
+    if (!_mcp9808Found)
     {
       return;
     }
     // Set the temp sensor resolution (higher res takes longer for reading)
-    _tempSensor.setResolution(MCP9808_MODE);
+    _mcp9808.setResolution(MCP9808_MODE);
 
     Serial.println(F("MCP9808"));
-    _sensorFound = true;
   }
   else
   {
@@ -109,19 +98,19 @@ void OXRS_SENSORS::scanI2CBus()
   }
 
   Serial.print(F("[sens] - 0x"));
-  Serial.print(OLED_I2C_ADDRESS, HEX);
+  Serial.print(SSD1306_I2C_ADDRESS, HEX);
   Serial.print(F("..."));
   // Check if there is anything responding on this address
-  Wire.beginTransmission(OLED_I2C_ADDRESS);
+  Wire.beginTransmission(SSD1306_I2C_ADDRESS);
   if (Wire.endTransmission() == 0)
   {
-    _oledFound = _display.begin(SSD1306_SWITCHCAPVCC, OLED_I2C_ADDRESS);
-    if (!_oledFound)
+    _ssd1306Found = _ssd1306.begin(SSD1306_SWITCHCAPVCC, SSD1306_I2C_ADDRESS);
+    if (!_ssd1306Found)
     {
       return;
     }
-    _display.clearDisplay();
-    _display.display();
+    _ssd1306.clearDisplay();
+    _ssd1306.display();
     Serial.println(F("OLED"));
   }
   else
@@ -137,19 +126,19 @@ void OXRS_SENSORS::scanI2CBus()
   if (Wire.endTransmission() == 0)
   {
     Serial.println(F("RTC"));
-    _rtcFound = _rtc.begin();
-    if (!_rtcFound)
+    _pcf8523Found = _pcf8523.begin();
+    if (!_pcf8523Found)
     {
       return;
     }
 
-    if (!_rtc.initialized() || _rtc.lostPower())
+    if (!_pcf8523.initialized() || _pcf8523.lostPower())
     {
       Serial.println(F("[sens] RTC is NOT initialized!"));
-      _rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+      _pcf8523.adjust(DateTime(F(__DATE__), F(__TIME__)));
       Serial.println(F("[sens] RTC Time set with compile time"));
     }
-    _rtc.start();
+    _pcf8523.start();
   }
   else
   {
@@ -159,79 +148,89 @@ void OXRS_SENSORS::scanI2CBus()
 
 void OXRS_SENSORS::tele()
 {
+  // shortcut if sensor reporting is disabled
+  if (_updateMs == 0) { return; }
+
   if ((millis() - _lastUpdate) > _updateMs)
   {
     StaticJsonDocument<150> json;
+    char payload[8];
 
-    if (_updateMs == 0)
+    if (_mcp9808Found)
     {
-      return;
-    }
+      float temperature = NAN;
 
-    if (_tempsensorFound == true)
-    {
       if (_tempMode == TEMP_C)
       {
-        _temperature = _tempSensor.readTempC();
+        temperature = _mcp9808.readTempC();
       }
+      else if (_tempMode == TEMP_F)
+      {
+        temperature = _mcp9808.readTempF();
+      }
+
+      if (temperature != NAN)
+      {
+        sprintf(payload, "%2.1f", temperature);
+        if (_sht40Found)
+        {
+          json["temperature_MCP9808"] = payload;
+        }
+        else
+        {
+          json["temperature"] = payload;
+        }
+      }
+    }
+
+    if (_sht40Found)
+    {
+      sensors_event_t humid, temp;
+      _sht40.getEvent(&humid, &temp);
+
+      float temperature = temp.temperature;
+      float humidity = humid.relative_humidity;
+
+      // sensor reading is in C, so check if we need to convert to F
       if (_tempMode == TEMP_F)
       {
-        _temperature = _tempSensor.readTempF();
+        temperature = (temperature * 1.8) + 32;
       }
-      if (_temperature != NAN)
+
+      sprintf(payload, "%2.1f", temperature);
+      if (_mcp9808Found)
       {
-        // Publish temp to mqtt
-        char payload[8];
-        sprintf(payload, "%2.1f", _temperature);
-        json["MCP9808-temp"] = payload;
+        json["temperature_SHT40"] = payload;
       }
+      else
+      {
+        json["temperature"] = payload;
+      }
+
+      sprintf(payload, "%2.1f", humidity);
+      json["humidity"] = payload;
     }
 
-    if (_humsensorFound == true)
+    if (_bh1750Found && _bh1750.measurementReady())
     {
-      sensors_event_t humidity, temp;
-      _sht4.getEvent(&humidity, &temp); // populate temp and humidity objects with fresh data
-
-      _tempShtc = temp.temperature;
-      _tempShtf = (temp.temperature * 1.8) + 32;
-      _humSht = humidity.relative_humidity;
-      char payload[8];
-      char payload2[8];
-      if (_tempMode == TEMP_C)
-      {
-        sprintf(payload, "%2.1f", _tempShtc);
-      }
-      if (_tempMode == TEMP_F)
-      {
-        sprintf(payload, "%2.1f", _tempShtf);
-      }
-      // Publish temp to mqtt
-      json["SHT40-temp"] = payload;
-      sprintf(payload2, "%2.1f", _humSht);
-      json["SHT40-hum"] = payload2;
+      float lux = _bh1750.readLightLevel();
+      sprintf(payload, "%2.1f", lux);
+      json["lux"] = payload;
     }
 
-    if (_luxsensorFound == true)
+    if (_ssd1306Found)
     {
-      if (_luxSensor.hasValue() == true) // non blocking reading
-      {
-        float lux = _luxSensor.getLux();
-        _luxSensor.start();
-        char payload[8];
-        sprintf(payload, "%2.1f", lux);
-        json["lux"] = payload;
-      }
+      char cstr2[1];
+      itoa(_sleepEnable, cstr2, 10);
+      json["oledSleepEnable"] = cstr2;
+
+      char cstr1[1];
+      itoa(_sleepState, cstr1, 10);
+      json["oledSleepState"] = cstr1;
     }
-
-    char cstr2[1];
-    itoa(_sleepEnable, cstr2, 10);
-    json["OLEDsleepEnable"] = cstr2;
-
-    char cstr1[1];
-    itoa(_sleepState, cstr1, 10);
-    json["OLEDsleepState"] = cstr1;
-
+    
     _sensorMqtt->publishTelemetry(json.as<JsonVariant>());
+
     // Reset our timer
     _lastUpdate = millis();
   }
@@ -239,13 +238,13 @@ void OXRS_SENSORS::tele()
 
 void OXRS_SENSORS::setConfigSchema(JsonVariant json)
 {
-  if (_tempsensorFound == false && _humsensorFound == false)
+  JsonObject _updateMillis = json.createNestedObject("sensorUpdateMillis");
+  _updateMillis["type"] = "integer";
+  _updateMillis["minimum"] = 0;
+
+  if (_mcp9808Found || _sht40Found)
   {
-    // do nothing - no temp value available to control
-  }
-  else
-  {
-    JsonObject _tempMode = json.createNestedObject("tempMode");
+    JsonObject _tempMode = json.createNestedObject("sensorTempMode");
     _tempMode["type"] = "string";
     JsonArray _tempEnum = _tempMode.createNestedArray("enum");
     _tempEnum.add("c");
@@ -255,32 +254,27 @@ void OXRS_SENSORS::setConfigSchema(JsonVariant json)
     _tempEnumNames.add("farenhite");
   }
 
-  if (_rtcFound == true)
+  if (_pcf8523Found)
   {
-    JsonObject _clockMode = json.createNestedObject("clockMode");
+    JsonObject _clockMode = json.createNestedObject("sensorClockMode");
     _clockMode["type"] = "string";
     JsonArray _clockEnum = _clockMode.createNestedArray("enum");
     _clockEnum.add("12");
     _clockEnum.add("24");
   }
 
-  JsonObject _updateMillis = json.createNestedObject("updateMillis");
-  _updateMillis["type"] = "integer";
-  _updateMillis["minimum"] = 0;
-
-  if (_oledFound == true)
+  if (_ssd1306Found)
   {
-    JsonObject _sleepOledenable = json.createNestedObject("sleepOledenable");
+    JsonObject _sleepOledenable = json.createNestedObject("sensorSleepOLEDEnable");
     _sleepOledenable["type"] = "boolean";
   }
 }
 
 void OXRS_SENSORS::setCommandSchema(JsonVariant json)
 {
-
-  if (_rtcFound == true)
+  if (_pcf8523Found)
   {
-    JsonObject _rtcItems = json.createNestedObject("RTC");
+    JsonObject _rtcItems = json.createNestedObject("sensorRTC");
     _rtcItems["type"] = "array";
 
     JsonObject _rtcItems2 = _rtcItems.createNestedObject("items");
@@ -316,28 +310,28 @@ void OXRS_SENSORS::setCommandSchema(JsonVariant json)
     _required.add("seconds");
   }
 
-  if (_oledFound == true)
+  if (_ssd1306Found)
   {
-    JsonObject _screenMode = json.createNestedObject("screenMode");
+    JsonObject _screenMode = json.createNestedObject("sensorScreenMode");
     _screenMode["type"] = "string";
     JsonArray _screenEnum = _screenMode.createNestedArray("enum");
     _screenEnum.add("off");
     _screenEnum.add("one");
-    if (_rtcFound == false && _tempsensorFound && _humsensorFound == false)
+    if (!_pcf8523Found && _mcp9808Found && !_sht40Found)
     {
     }
     else
     {
       _screenEnum.add("two");
     }
-    if (_luxsensorFound == false && _tempsensorFound == false && _humsensorFound == false)
+    if (!_bh1750Found && !_mcp9808Found && !_sht40Found)
     {
     }
     else
     {
       _screenEnum.add("three");
     }
-    if (_humsensorFound == true)
+    if (_sht40Found)
     {
       _screenEnum.add("four");
     }
@@ -345,166 +339,166 @@ void OXRS_SENSORS::setCommandSchema(JsonVariant json)
     JsonArray _screenEnumNames = _screenMode.createNestedArray("enumNames");
     _screenEnumNames.add("off");
     _screenEnumNames.add("IP Address & MAC Address");
-    if (_rtcFound == false && _tempsensorFound && _humsensorFound == false)
+    if (!_pcf8523Found && _mcp9808Found && !_sht40Found)
     {
     }
     else
     {
       _screenEnumNames.add("Time & Temperature");
     }
-    if (_luxsensorFound == false && _tempsensorFound == false && _humsensorFound == false)
+    if (!_bh1750Found && !_mcp9808Found && !_sht40Found)
     {
     }
     else
     {
       _screenEnumNames.add("LUX & Temperature");
     }
-    if (_humsensorFound == true)
+    if (_sht40Found)
     {
       _screenEnumNames.add("Humidity & Temperature");
     }
     _screenEnumNames.add("2 Lines of Custom Text");
 
-    JsonObject _oneOLED = json.createNestedObject("oneOLED");
+    JsonObject _oneOLED = json.createNestedObject("sensorOneOLED");
     _oneOLED["type"] = "string";
     _oneOLED["maxLength"] = 10;
 
-    JsonObject _twoOLED = json.createNestedObject("twoOLED");
+    JsonObject _twoOLED = json.createNestedObject("sensorTwoOLED");
     _twoOLED["type"] = "string";
     _twoOLED["maxLength"] = 10;
-  }
 
-  JsonObject _sleeping = json.createNestedObject("sleep");
-  _sleeping["type"] = "boolean";
+    JsonObject _sleeping = json.createNestedObject("sensorSleepOLED");
+    _sleeping["type"] = "boolean";
+  }
 }
 
 void OXRS_SENSORS::conf(JsonVariant json)
 {
-  if (json.containsKey("screenMode")) // for what mode the OLED is in
+  if (json.containsKey("sensorUpdateMillis"))
   {
-    if (strcmp(json["screenMode"], "off") == 0)
+    _updateMs = json["sensorUpdateMillis"].as<uint32_t>();
+  }
+
+  if (json.containsKey("sensorScreenMode")) // for what mode the OLED is in
+  {
+    if (strcmp(json["sensorScreenMode"], "off") == 0)
     {
       _screenMode = OLED_MODE_OFF;
     }
-    if (strcmp(json["screenMode"], "one") == 0)
+    if (strcmp(json["sensorScreenMode"], "one") == 0)
     {
       _screenMode = OLED_MODE_ONE;
     }
-    if (strcmp(json["screenMode"], "two") == 0)
+    if (strcmp(json["sensorScreenMode"], "two") == 0)
     {
       _screenMode = OLED_MODE_TWO;
     }
-    if (strcmp(json["screenMode"], "three") == 0)
+    if (strcmp(json["sensorScreenMode"], "three") == 0)
     {
       _screenMode = OLED_MODE_THREE;
     }
-    if (strcmp(json["screenMode"], "four") == 0)
+    if (strcmp(json["sensorScreenMode"], "four") == 0)
     {
       _screenMode = OLED_MODE_FOUR;
     }
-    if (strcmp(json["screenMode"], "five") == 0)
+    if (strcmp(json["sensorScreenMode"], "five") == 0)
     {
       _screenMode = OLED_MODE_FIVE;
     }
   }
 
-  if (json.containsKey("clockMode")) // for what mode the tower lights are in
+  if (json.containsKey("sensorClockMode"))
   {
-    if (strcmp(json["clockMode"], "12") == 0)
+    if (strcmp(json["sensorClockMode"], "12") == 0)
     {
       _clockMode = PCF8523_12;
     }
-    else if (strcmp(json["clockMode"], "24") == 0)
+    else if (strcmp(json["sensorClockMode"], "24") == 0)
     {
       _clockMode = PCF8523_24;
     }
   }
 
-  if (json.containsKey("tempMode")) // for what mode the tower lights are in
+  if (json.containsKey("sensorTempMode"))
   {
-    if (strcmp(json["tempMode"], "c") == 0)
+    if (strcmp(json["sensorTempMode"], "c") == 0)
     {
       _tempMode = TEMP_C;
     }
-    else if (strcmp(json["tempMode"], "f") == 0)
+    else if (strcmp(json["sensorTempMode"], "f") == 0)
     {
       _tempMode = TEMP_F;
     }
   }
 
-  if (json.containsKey("sleepOledenable"))
+  if (json.containsKey("sensorSleepOLEDEnable"))
   {
-    _sleepEnable = json["sleepOledenable"].as<bool>() ? HIGH : LOW;
-  }
-
-  if (json.containsKey("updateMillis")) // for updating i2c sensors
-  {
-    _updateMs = json["updateMillis"].as<uint32_t>();
+    _sleepEnable = json["sensorSleepOLEDEnable"].as<bool>() ? HIGH : LOW;
   }
 }
 
 void OXRS_SENSORS::cmnd(JsonVariant json)
 {
-  if (json.containsKey("RTC"))
+  if (json.containsKey("sensorRTC"))
   {
-    if (_rtcFound == true) // we have an RTC to update
+    for (JsonVariant RTC : json["sensorRTC"].as<JsonArray>())
     {
-      for (JsonVariant RTC : json["RTC"].as<JsonArray>())
-      {
-        jsonRtcCommand(RTC);
-      }
+      jsonRtcCommand(RTC);
     }
   }
 
-  if (json.containsKey("screenMode")) // for what mode the OLED is in
+  if (json.containsKey("sensorScreenMode")) // for what mode the OLED is in
   {
-    if (strcmp(json["screenMode"], "off") == 0)
+    if (strcmp(json["sensorScreenMode"], "off") == 0)
     {
       _screenMode = OLED_MODE_OFF;
     }
-    if (strcmp(json["screenMode"], "one") == 0)
+    if (strcmp(json["sensorScreenMode"], "one") == 0)
     {
       _screenMode = OLED_MODE_ONE;
     }
-    if (strcmp(json["screenMode"], "two") == 0)
+    if (strcmp(json["sensorScreenMode"], "two") == 0)
     {
       _screenMode = OLED_MODE_TWO;
     }
-    if (strcmp(json["screenMode"], "three") == 0)
+    if (strcmp(json["sensorScreenMode"], "three") == 0)
     {
       _screenMode = OLED_MODE_THREE;
     }
-    if (strcmp(json["screenMode"], "four") == 0)
+    if (strcmp(json["sensorScreenMode"], "four") == 0)
     {
       _screenMode = OLED_MODE_FOUR;
     }
-    if (strcmp(json["screenMode"], "five") == 0)
+    if (strcmp(json["sensorScreenMode"], "five") == 0)
     {
       _screenMode = OLED_MODE_FIVE;
     }
   }
 
-  if (json.containsKey("oneOLED")) // custom text for OLED
+  if (json.containsKey("sensorOneOLED")) // custom text for OLED
   {
-    _screenLineOne = json["oneOLED"].as<String>();
+    _screenLineOne = json["sensorOneOLED"].as<String>();
   }
 
-  if (json.containsKey("twoOLED")) // custom text for OLED
+  if (json.containsKey("sensorTwoOLED")) // custom text for OLED
   {
-    _screenLineTwo = json["twoOLED"].as<String>();
+    _screenLineTwo = json["sensorTwoOLED"].as<String>();
   }
 
-  if (json.containsKey("sleep"))
+  if (json.containsKey("sensorSleepOLED"))
   {
-    if (_sleepEnable == true)
+    if (_sleepEnable)
     {
-      _sleepState = json["sleep"].as<bool>() ? HIGH : LOW;
+      _sleepState = json["sensorSleepOLED"].as<bool>() ? HIGH : LOW;
     }
   }
 }
 
 void OXRS_SENSORS::jsonRtcCommand(JsonVariant json)
 {
+  // TODO: you can use RegEx in your JSON command schema to validate a string 
+  //       to ensure it is a known date/time format - this might be easier?
+  
   if (json.containsKey("year")) // set RTC time
   {
     if (!json.containsKey("month"))
@@ -529,7 +523,7 @@ void OXRS_SENSORS::jsonRtcCommand(JsonVariant json)
     }
     //      January 21, 2014 at 3am you would call:
     //      rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
-    _rtc.adjust(DateTime(json["year"].as<uint16_t>(), json["month"].as<uint8_t>(), json["day"].as<uint8_t>(), json["hour"].as<uint8_t>(), json["minute"].as<uint8_t>(), json["seconds"].as<uint8_t>()));
+    _pcf8523.adjust(DateTime(json["year"].as<uint16_t>(), json["month"].as<uint8_t>(), json["day"].as<uint8_t>(), json["hour"].as<uint8_t>(), json["minute"].as<uint8_t>(), json["seconds"].as<uint8_t>()));
   }
 }
 
@@ -543,27 +537,27 @@ void OXRS_SENSORS::jsonRtcCommand(JsonVariant json)
 
 void OXRS_SENSORS::off_screen() // custom text on line one
 {
-  _display.clearDisplay();
-  _display.display();
+  _ssd1306.clearDisplay();
+  _ssd1306.display();
 }
 
 void OXRS_SENSORS::one_screen() // custom text on line one
 {
-  _display.setCursor(0, 0);
-  _display.print(_screenLineOne);
+  _ssd1306.setCursor(0, 0);
+  _ssd1306.print(_screenLineOne);
 }
 
 void OXRS_SENSORS::two_screen() // custom text on line two
 {
-  _display.setCursor(0, 16);
-  _display.print(_screenLineTwo);
+  _ssd1306.setCursor(0, 16);
+  _ssd1306.print(_screenLineTwo);
 }
 
 void OXRS_SENSORS::time_screen() // show time on line one
 {
-  if (_rtcFound == true) // show the time if time is availble
+  if (_pcf8523Found) // show the time if time is availble
   {
-    _display.setCursor(0, 0);
+    _ssd1306.setCursor(0, 0);
     if (_clockMode == PCF8523_12) // 12 hour clock requested
     {
       if (_currentHour >= 13)
@@ -571,37 +565,37 @@ void OXRS_SENSORS::time_screen() // show time on line one
         _modHour = _currentHour - 12;
         if (_modHour < 10)
         {
-          _display.print(" ");
+          _ssd1306.print(" ");
         }
-        _display.print(_modHour);
+        _ssd1306.print(_modHour);
       }
       else if (_currentHour == 0)
       {
-        _display.print("12");
+        _ssd1306.print("12");
       }
       else
       {
         if (_currentHour < 10)
         {
-          _display.print(" ");
+          _ssd1306.print(" ");
         }
-        _display.print(_currentHour);
+        _ssd1306.print(_currentHour);
       }
 
-      _display.print(":");
+      _ssd1306.print(":");
       if (_currentMinute < 10)
       {
-        _display.print("0");
+        _ssd1306.print("0");
       }
-      _display.print(_currentMinute);
+      _ssd1306.print(_currentMinute);
 
       if (_currentHour >= 13)
       {
-        _display.print(" PM");
+        _ssd1306.print(" PM");
       }
       else
       {
-        _display.print(" AM");
+        _ssd1306.print(" AM");
       }
     }
 
@@ -609,91 +603,91 @@ void OXRS_SENSORS::time_screen() // show time on line one
     {
       if (_currentHour < 10)
       {
-        _display.print('0');
+        _ssd1306.print('0');
       }
-      _display.print(_currentHour);
-      _display.print(":");
+      _ssd1306.print(_currentHour);
+      _ssd1306.print(":");
       if (_currentMinute < 10)
       {
-        _display.print('0');
+        _ssd1306.print('0');
       }
-      _display.print(_currentMinute);
-      _display.print("h");
+      _ssd1306.print(_currentMinute);
+      _ssd1306.print("h");
     }
   }
 }
 
 void OXRS_SENSORS::temp_screen() // line two showing temp
 {
-  if (_humsensorFound == true)
+  if (_sht40Found)
   {
-    _display.setCursor(0, 16); // line 2
+    _ssd1306.setCursor(0, 16); // line 2
     if (_tempMode == TEMP_C)
     {
-      _display.print(_c, 1);
-      _display.print("\tC");
+      _ssd1306.print(_c, 1);
+      _ssd1306.print("\tC");
     }
     if (_tempMode == TEMP_F)
     {
-      _display.print(_f, 1);
-      _display.print("\tF");
+      _ssd1306.print(_f, 1);
+      _ssd1306.print("\tF");
     }
   }
-  if (_tempsensorFound == true && _humsensorFound == false)
+  else if (_mcp9808Found)
   {
-    _display.setCursor(0, 16); // line 2
+    _ssd1306.setCursor(0, 16); // line 2
     if (_tempMode == TEMP_C)
     {
-      _display.print(_c, 1);
-      _display.print("\tC");
+      _ssd1306.print(_c, 1);
+      _ssd1306.print("\tC");
     }
     if (_tempMode == TEMP_F)
     {
-      _display.print(_f, 1);
-      _display.print("\tF");
+      _ssd1306.print(_f, 1);
+      _ssd1306.print("\tF");
     }
   }
 }
 
 void OXRS_SENSORS::hum_screen()
 {
-  if (_humsensorFound == true)
+  if (_sht40Found)
   {
-    _display.setCursor(0, 0); // line 1
-    _display.print(_h, 1);
-    _display.print("% rH");
+    _ssd1306.setCursor(0, 0); // line 1
+    _ssd1306.print(_h, 1);
+    _ssd1306.print("% rH");
   }
 }
 
 void OXRS_SENSORS::lux_screen() // line one showing lux
 {
-  if (_luxsensorFound == true)
+  if (_bh1750Found)
   {
-    _display.setCursor(0, 0); // line 1
-    _display.print(_l, 1);
-    _display.print(" LUX");
+    _ssd1306.setCursor(0, 0); // line 1
+    _ssd1306.print(_l, 1);
+    _ssd1306.print(" LUX");
   }
 }
 
 void OXRS_SENSORS::IP_screen() // line one showing IP address
 {
-  _display.setTextSize(1);
-  _display.setCursor(0, 0); // line 1
-  _display.print(_ipAddress);
+  _ssd1306.setTextSize(1);
+  _ssd1306.setCursor(0, 0); // line 1
+  _ssd1306.print(_ipAddress);
 }
 
 void OXRS_SENSORS::MAC_screen() // line two showing mac address
 {
-  _display.setTextSize(1);
+  _ssd1306.setTextSize(1);
   char mac_display[18];
   sprintf_P(mac_display, PSTR("%02X:%02X:%02X:%02X:%02X:%02X"), _mac[0], _mac[1], _mac[2], _mac[3], _mac[4], _mac[5]);
-  _display.setCursor(0, 16); // line 2
-  _display.print(mac_display);
+  _ssd1306.setCursor(0, 16); // line 2
+  _ssd1306.print(mac_display);
 }
 
 void OXRS_SENSORS::oled() // control the OLED screen if availble
 {
-  if (_oledFound == true)
+  if (_ssd1306Found)
   {
     oledUpdate();
   }
@@ -703,7 +697,7 @@ void OXRS_SENSORS::oled(byte *mac) // control the OLED screen if availble
 {
   memcpy(_mac, mac, 6);
 
-  if (_oledFound == true)
+  if (_ssd1306Found)
   {
     oledUpdate();
   }
@@ -712,7 +706,7 @@ void OXRS_SENSORS::oled(byte *mac) // control the OLED screen if availble
 void OXRS_SENSORS::oled(IPAddress ip) // control the OLED screen if availble
 {
   _ipAddress = ip;
-  if (_oledFound == true)
+  if (_ssd1306Found)
   {
     oledUpdate();
   }
@@ -722,19 +716,19 @@ void OXRS_SENSORS::oledUpdate() // control the OLED screen if availble
 {
   if ((millis() - _previousOledtemp) > OLED_INTERVAL_TEMP)
   {
-    if (_humsensorFound == true)
+    if (_sht40Found)
     {
-      sensors_event_t humidity, temp;
-      _sht4.getEvent(&humidity, &temp); // populate temp and humidity objects with fresh data
+      sensors_event_t humid, temp;
+      _sht40.getEvent(&humid, &temp);
 
       _c = temp.temperature;
       _f = (temp.temperature * 1.8) + 32;
-      _h = humidity.relative_humidity;
+      _h = humid.relative_humidity;
     }
-    if (_tempsensorFound == true && _humsensorFound == false)
+    else if (_mcp9808Found)
     {
-      _c = _tempSensor.readTempC();
-      _f = _tempSensor.readTempF();
+      _c = _mcp9808.readTempC();
+      _f = _mcp9808.readTempF();
     }
     // Reset our timer
     _previousOledtemp = millis();
@@ -742,31 +736,30 @@ void OXRS_SENSORS::oledUpdate() // control the OLED screen if availble
 
   if ((millis() - _previousOledlux) > OLED_INTERVAL_LUX)
   {
-    if (_luxsensorFound == true && _luxSensor.hasValue() == true)
+    if (_bh1750Found && _bh1750.measurementReady())
     {
-      _l = _luxSensor.getLux();
-      _luxSensor.start(); // start the next reading
+      _l = _bh1750.readLightLevel();
       _previousOledlux = millis();
     }
   }
 
-  if (_rtcFound == true)
+  if (_pcf8523Found)
   {
     // Time Keeping
-    DateTime now = _rtc.now();
+    DateTime now = _pcf8523.now();
     _currentHour = now.hour();
     _currentMinute = now.minute();
   }
 
-  if (_sleepState == true) // screen goes to sleep
+  if (_sleepState) // screen goes to sleep
   {
     off_screen();
   }
   else
   {
-    _display.clearDisplay();
-    _display.setTextSize(2);
-    _display.setTextColor(WHITE);
+    _ssd1306.clearDisplay();
+    _ssd1306.setTextSize(2);
+    _ssd1306.setTextColor(WHITE);
 
     if (_screenMode == OLED_MODE_OFF)
     {
@@ -798,6 +791,6 @@ void OXRS_SENSORS::oledUpdate() // control the OLED screen if availble
       two_screen();
     }
 
-    _display.display();
+    _ssd1306.display();
   }
 }

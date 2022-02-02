@@ -10,7 +10,7 @@
 #include <Adafruit_MCP9808.h> // For temp sensor
 #include <Adafruit_SSD1306.h> // for OLED display
 #include <RTClib.h>           // for PCF8523 RTC
-#include <hp_BH1750.h>        // for bh1750 lux sensor
+#include <BH1750.h>           // for BH1750 lux sensor
 #include <Adafruit_SHT4x.h>   // for SHT40 Temp / humidity sensor
 
 #if defined(ESP32)
@@ -24,17 +24,15 @@
 
 #define DEFAULT_UPDATE_MS 60000
 
-#define DEFAULT_SLEEPENABLE true
+#define DEFAULT_OLED_SLEEP_ENABLE true
+
+// general temp monitoring varible
+#define TEMP_C 0
+#define TEMP_F 1
 
 // MCP9808 temperature sensor
 #define MCP9808_I2C_ADDRESS 0x18
 #define MCP9808_MODE 0
-#define TEMP_C 0
-#define TEMP_F 1
-
-// general temp monitoring varible
-#define TEMP_C 1
-#define TEMP_F 2
 
 // SHT40 temperature and humidity sensor
 #define SHT40_I2C_ADDRESS 0x44
@@ -48,10 +46,10 @@
 #define PCF8523_24 1
 
 // OLED Screen
-#define OLED_I2C_ADDRESS 0x3C
-#define OLED_RESET -1
+#define SSD1306_I2C_ADDRESS 0x3C
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 32
+#define OLED_RESET -1
 #define OLED_INTERVAL_TEMP 10000L
 #define OLED_INTERVAL_LUX 2500L
 
@@ -69,7 +67,6 @@ public:
   OXRS_SENSORS(OXRS_MQTT &mqtt);
 
   void begin();
-  void begin(uint8_t pin_sda, uint8_t pin_scl);
 
   void oled();
   void oled(IPAddress ip);
@@ -95,25 +92,18 @@ private:
   uint32_t _lastUpdate;
 
   // i2c scan results
-  bool _sensorFound = false; // set to true if sensor requiring tele mqtt updated is needed
-  bool _tempsensorFound = false;
-  bool _luxsensorFound = false;
-  bool _oledFound = false;
-  bool _rtcFound = false;
-  bool _humsensorFound = false;
+  bool _bh1750Found = false;
+  bool _mcp9808Found = false;
+  bool _sht40Found = false;
+  bool _ssd1306Found = false;
+  bool _pcf8523Found = false;
 
   // OLED varibles
   uint8_t _screenMode = OLED_MODE_ONE;
-  uint8_t _sleepEnable = DEFAULT_SLEEPENABLE;
+  uint8_t _sleepEnable = DEFAULT_OLED_SLEEP_ENABLE;
   uint8_t _sleepState = !_sleepEnable;
   String _screenLineOne = "Hello";
   String _screenLineTwo = "World";
-
-  // mqtt temperature reading
-  float _temperature;
-  float _tempShtc;
-  float _tempShtf;
-  float _humSht;
 
   // universal tmperature variable - for degrees c / f
   bool _tempMode = TEMP_C;
