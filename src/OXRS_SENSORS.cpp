@@ -156,6 +156,7 @@ void OXRS_SENSORS::tele()
     StaticJsonDocument<150> json;
     char payload[8];
 
+    // MCP9808 temp sensor has precedence over SHT40
     if (_mcp9808Found)
     {
       float temperature = NAN;
@@ -706,20 +707,27 @@ void OXRS_SENSORS::oledUpdate() // control the OLED screen if availble
 {
   if ((millis() - _previousOledtemp) > OLED_INTERVAL_TEMP)
   {
+    // MCP9808 temp sensor has precedence over SHT40
+    if (_mcp9808Found)
+    {
+      _c = _mcp9808.readTempC();
+      _f = _mcp9808.readTempF();
+    }
+    
     if (_sht40Found)
     {
       sensors_event_t humid, temp;
       _sht40.getEvent(&humid, &temp);
 
-      _c = temp.temperature;
-      _f = (temp.temperature * 1.8) + 32;
+      if (!_mcp9808Found)
+      {
+        _c = temp.temperature;
+        _f = (temp.temperature * 1.8) + 32;
+      }
+
       _h = humid.relative_humidity;
     }
-    else if (_mcp9808Found)
-    {
-      _c = _mcp9808.readTempC();
-      _f = _mcp9808.readTempF();
-    }
+
     // Reset our timer
     _previousOledtemp = millis();
   }
