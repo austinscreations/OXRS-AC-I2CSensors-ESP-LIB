@@ -220,7 +220,11 @@ void OXRS_SENSORS::tele()
       json["oledSleepState"] = cstr1;
     }
     
-    _sensorMqtt->publishTelemetry(json.as<JsonVariant>());
+    // Check we have something to publish
+    if (!json.isNull())
+    {
+      _sensorMqtt->publishTelemetry(json.as<JsonVariant>());
+    }
 
     // Reset our timer
     _lastUpdate = millis();
