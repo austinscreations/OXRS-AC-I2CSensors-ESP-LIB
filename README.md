@@ -13,7 +13,7 @@ Dependencies:
 #include <Adafruit_MCP9808.h>         // For temp sensor
 #include <Adafruit_SSD1306.h>         // For OLED display
 #include <RTClib.h>                   // For PCF8523 RTC
-#include <BH1750.h>                   // For BH1750 lux sensor
+#include <BH1750.h>                   // For BH1750 lux sensor - non-adafruit library: https://github.com/claws/BH1750
 #include <Adafruit_SHT4x.h>           // For SHT40 Temp / humidity sensor
 
 #if defined(ESP32)
