@@ -172,14 +172,7 @@ void OXRS_SENSORS::tele()
       if (temperature != NAN)
       {
         sprintf(payload, "%2.1f", temperature);
-        if (_sht40Found)
-        {
-          json["temperature_MCP9808"] = payload;
-        }
-        else
-        {
-          json["temperature"] = payload;
-        }
+        json["temperature"] = payload;
       }
     }
 
@@ -188,25 +181,22 @@ void OXRS_SENSORS::tele()
       sensors_event_t humid, temp;
       _sht40.getEvent(&humid, &temp);
 
-      float temperature = temp.temperature;
-      float humidity = humid.relative_humidity;
+      // only publish temp reading from this sensor if the MCP9808 is not found
+      if (!_mcp9808Found)
+      {
+        // sensor reading is in C, so check if we need to convert to F
+        float temperature = temp.temperature;
+        if (_tempMode == TEMP_F)
+        {
+          temperature = (temperature * 1.8) + 32;
+        }
 
-      // sensor reading is in C, so check if we need to convert to F
-      if (_tempMode == TEMP_F)
-      {
-        temperature = (temperature * 1.8) + 32;
-      }
-
-      sprintf(payload, "%2.1f", temperature);
-      if (_mcp9808Found)
-      {
-        json["temperature_SHT40"] = payload;
-      }
-      else
-      {
+        sprintf(payload, "%2.1f", temperature);
         json["temperature"] = payload;
       }
 
+      // always publish humidity if this sensor is found
+      float humidity = humid.relative_humidity;
       sprintf(payload, "%2.1f", humidity);
       json["humidity"] = payload;
     }
