@@ -1,4 +1,4 @@
-# OXRS-AC-IO-SENSORS-ESP-LIB
+# OXRS-AC-SENSORS-ESP-LIB
 Library for interfacing QWIIC I2C sensors into OXRS firmware devices
 
 Currently supports:
