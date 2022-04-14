@@ -247,7 +247,7 @@ void OXRS_SENSORS::setConfigSchema(JsonVariant json)
   {
     JsonObject _tempMode = json.createNestedObject("sensorTempMode");
     _tempMode["type"] = "string";
-    _tempMode["description"] = "Temperature output in Farenhite or (defualt) Celcius";
+    _tempMode["description"] = "Temperature reports in Farenhite or (default) Celcius";
     JsonArray _tempEnum = _tempMode.createNestedArray("enum");
     _tempEnum.add("c");
     _tempEnum.add("f");
@@ -260,7 +260,7 @@ void OXRS_SENSORS::setConfigSchema(JsonVariant json)
   {
     JsonObject _clockMode = json.createNestedObject("sensorClockMode");
     _clockMode["type"] = "string";
-    _clockMode["description"] = "Sets OLED Clock output to 12 hour or (defualt) 24 hour display";
+    _clockMode["description"] = "Sets OLED clock display to 12 hour or (default) 24 hour display";
     JsonArray _clockEnum = _clockMode.createNestedArray("enum");
     _clockEnum.add("12");
     _clockEnum.add("24");
@@ -270,7 +270,7 @@ void OXRS_SENSORS::setConfigSchema(JsonVariant json)
   {
     JsonObject _screenMode = json.createNestedObject("sensorScreenMode");
     _screenMode["type"] = "string";
-    _screenMode["description"] = "Select the active / visible OLED screen on Boot. Options are availble based on sensors connected but in total 5 screens + off are availble";
+    _screenMode["description"] = "Select the active / visible OLED screen on boot. Options are availble based on sensors connected but in total 5 screens + off are availble";
     JsonArray _screenEnum = _screenMode.createNestedArray("enum");
     _screenEnum.add("off");
     _screenEnum.add("one");
@@ -320,7 +320,7 @@ void OXRS_SENSORS::setConfigSchema(JsonVariant json)
     {
       JsonObject _sleepOledenable = json.createNestedObject("sensorSleepOLEDEnable");
       _sleepOledenable["type"] = "boolean";
-      _sleepOledenable["description"] = "Allows the screen to be put in sleepMode";
+      _sleepOledenable["description"] = "Allows the screen to be put in sleep mode";
     }
   }
 
@@ -330,7 +330,7 @@ void OXRS_SENSORS::setConfigSchema(JsonVariant json)
     {
       JsonObject _rtcItems = json.createNestedObject("sensorRTC");
       _rtcItems["type"] = "array";
-      _rtcItems["description"] = "Ability to update the RTC time - year,month,day,hour,minute,seconds. ALL REQUIRED";
+      _rtcItems["description"] = "Ability to update the RTC time - year,month,day,hour,minute,seconds";
 
       JsonObject _rtcItems2 = _rtcItems.createNestedObject("items");
       _rtcItems2["type"] = "object";
