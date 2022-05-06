@@ -13,13 +13,10 @@
 #include <BH1750.h>           // for BH1750 lux sensor
 #include <Adafruit_SHT4x.h>   // for SHT40 Temp / humidity sensor
 
-#if defined(ESP32)
-#include <WiFi.h>
-#include <ETH.h>
-#include <Ethernet.h>
-#elif defined(ESP8266)
+#if defined(ESP8266)
 #include <ESP8266WiFi.h>
-#include <Ethernet.h>
+#else
+#include <WiFi.h>
 #endif
 
 #define DEFAULT_UPDATE_MS 60000
