@@ -2,8 +2,8 @@
 
 #include "OXRS_SENSORS.h"
 
-// OLED display
-Adafruit_SSD1306 _ssd1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+// OLED display - Width, height, &wire, Reset
+Adafruit_SSD1306 _ssd1306(128, 32, &Wire, -1);
 
 // PCF8523 RTC
 RTC_PCF8523 _pcf8523;
