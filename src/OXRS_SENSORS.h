@@ -74,6 +74,9 @@ public:
   void setConfigSchema(JsonVariant json);
   void setCommandSchema(JsonVariant json);
 
+  float getTemperatureValue(void);
+  bool  getTemperatureUnits(void);
+
 private:
 
   IPAddress _ipAddress;

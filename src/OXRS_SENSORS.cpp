@@ -861,3 +861,31 @@ void OXRS_SENSORS::oledUpdate() // control the OLED screen if availble
     _ssd1306.display();
   }
 }
+
+// getter functions to expose internal value / settings
+
+// return measured temperature in configured mode
+float OXRS_SENSORS::getTemperatureValue() 
+{
+  float temperature = NAN;
+  // MCP9808 temp sensor has precedence over SHT40
+  if (_mcp9808Found)
+  {
+    if (_tempMode == TEMP_C)
+    {
+      temperature = _mcp9808.readTempC();
+    }
+    else if (_tempMode == TEMP_F)
+    {
+      temperature = _mcp9808.readTempF();
+    }
+  }
+
+  return temperature;
+}
+
+// return setting for units
+bool OXRS_SENSORS::getTemperatureUnits()
+{
+  return _tempMode;
+}
