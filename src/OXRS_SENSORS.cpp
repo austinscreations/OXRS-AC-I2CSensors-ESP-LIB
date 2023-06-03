@@ -88,7 +88,7 @@ bool OXRS_SENSORS::scanI2CAddress(byte address, const char * name)
 
   // Check if there is anything responding on this address
   Wire.beginTransmission(address);
-  return Wire.endTransmission() == 0;
+  if (Wire.endTransmission() == 0)
   {
     Serial.println(name);
     return true;
