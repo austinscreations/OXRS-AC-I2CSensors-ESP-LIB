@@ -117,7 +117,7 @@ private:
   void jsonRtcCommand(JsonVariant json);
 
   void scanI2CBus();
-  bool scanI2CAddress(byte address);
+  bool scanI2CAddress(byte address, const char * name);
 
   void off_screen();
   void one_screen();

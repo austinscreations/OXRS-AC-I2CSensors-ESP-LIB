@@ -102,7 +102,11 @@ bool OXRS_SENSORS::scanI2CAddress(byte address, const char * name)
 
 void OXRS_SENSORS::tele(JsonVariant json)
 {
-  if (_updateMs > 0 && (millis() - _lastUpdate) > _updateMs)
+  // Ignore if sensor publishing has been disabled
+  if (_updateMs == 0) { return; }
+
+  // Check if we are ready to publish
+  if ((millis() - _lastUpdate) > _updateMs)
   {
     char payload[8];
 
