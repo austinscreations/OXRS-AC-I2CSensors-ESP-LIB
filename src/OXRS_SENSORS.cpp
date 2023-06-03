@@ -1,5 +1,4 @@
 // cpp file v0.5.0
-
 #include "OXRS_SENSORS.h"
 
 // OLED display - Width, height, &wire, Reset
@@ -22,11 +21,6 @@ Adafruit_SHT4x _sht40 = Adafruit_SHT4x();
  *  Main program
  *
  */
-OXRS_SENSORS::OXRS_SENSORS(OXRS_MQTT &mqtt)
-{
-  _sensorMqtt = &mqtt;
-}
-
 void OXRS_SENSORS::begin()
 {
   scanI2CBus();
@@ -34,129 +28,82 @@ void OXRS_SENSORS::begin()
 
 void OXRS_SENSORS::scanI2CBus()
 {
-  Serial.println(F("[sens] scanning for i2c devices..."));
+  Serial.println(F("[sens] scanning for I2C devices..."));
 
-  Serial.print(F("[sens] - 0x"));
-  Serial.print(BH1750_I2C_ADDRESS, HEX);
-  Serial.print(F("..."));
-  // Check if there is anything responding on this address
-  Wire.beginTransmission(BH1750_I2C_ADDRESS);
-  if (Wire.endTransmission() == 0)
+  if (scanI2CAddress(BH1750_I2C_ADDRESS, "BH1750"))
   {
     _bh1750Found = _bh1750.begin(BH1750::CONTINUOUS_HIGH_RES_MODE);
-    if (!_bh1750Found)
-    {
-      return;
-    }
-    Serial.println(F("BH1750"));
-  }
-  else
-  {
-    Serial.println(F("empty"));
   }
 
-  Serial.print(F("[sens] - 0x"));
-  Serial.print(SHT40_I2C_ADDRESS, HEX);
-  Serial.print(F("..."));
-  // Check if there is anything responding on this address
-  Wire.beginTransmission(SHT40_I2C_ADDRESS);
-  if (Wire.endTransmission() == 0)
+  if (scanI2CAddress(SHT40_I2C_ADDRESS, "SHT40"))
   {
     _sht40Found = _sht40.begin();
-    if (!_sht40Found)
+    if (_sht40Found)
     {
-      return;
+      _sht40.setPrecision(SHT4X_MED_PRECISION);
+      _sht40.setHeater(SHT4X_NO_HEATER);
     }
-    Serial.println(F("SHT40"));
-    _sht40.setPrecision(SHT4X_MED_PRECISION);
-    _sht40.setHeater(SHT4X_NO_HEATER);
-  }
-  else
-  {
-    Serial.println(F("empty"));
   }
 
-  Serial.print(F("[sens] - 0x"));
-  Serial.print(MCP9808_I2C_ADDRESS, HEX);
-  Serial.print(F("..."));
-  Wire.beginTransmission(MCP9808_I2C_ADDRESS);
-  if (Wire.endTransmission() == 0)
+  if (scanI2CAddress(MCP9808_I2C_ADDRESS, "MCP9808"))
   {
     _mcp9808Found = _mcp9808.begin(MCP9808_I2C_ADDRESS);
-    if (!_mcp9808Found)
+    if (_mcp9808Found)
     {
-      return;
+      _mcp9808.setResolution(MCP9808_MODE);
     }
-    // Set the temp sensor resolution (higher res takes longer for reading)
-    _mcp9808.setResolution(MCP9808_MODE);
-
-    Serial.println(F("MCP9808"));
-  }
-  else
-  {
-    Serial.println(F("empty"));
   }
 
-  Serial.print(F("[sens] - 0x"));
-  Serial.print(SSD1306_I2C_ADDRESS, HEX);
-  Serial.print(F("..."));
-  // Check if there is anything responding on this address
-  Wire.beginTransmission(SSD1306_I2C_ADDRESS);
-  if (Wire.endTransmission() == 0)
+  if (scanI2CAddress(SSD1306_I2C_ADDRESS, "OLED"))
   {
     _ssd1306Found = _ssd1306.begin(SSD1306_SWITCHCAPVCC, SSD1306_I2C_ADDRESS);
-    if (!_ssd1306Found)
+    if (_ssd1306Found)
     {
-      return;
+      _ssd1306.clearDisplay();
+      _ssd1306.display();
     }
-    _ssd1306.clearDisplay();
-    _ssd1306.display();
-    Serial.println(F("OLED"));
-  }
-  else
-  {
-    Serial.println(F("empty"));
   }
 
-  Serial.print(F("[sens] - 0x"));
-  Serial.print(PCF8523_I2C_ADDRESS, HEX);
-  Serial.print(F("..."));
-  // Check if there is anything responding on this address
-  Wire.beginTransmission(PCF8523_I2C_ADDRESS);
-  if (Wire.endTransmission() == 0)
+  if (scanI2CAddress(PCF8523_I2C_ADDRESS, "RTC"))
   {
-    Serial.println(F("RTC"));
     _pcf8523Found = _pcf8523.begin();
-    if (!_pcf8523Found)
+    if (_pcf8523Found)
     {
-      return;
+      if (!_pcf8523.initialized() || _pcf8523.lostPower())
+      {
+        Serial.println(F("[sens] RTC is NOT initialized!"));
+        _pcf8523.adjust(DateTime(F(__DATE__), F(__TIME__)));
+        Serial.println(F("[sens] RTC Time set with compile time"));
+      }
+      _pcf8523.start();
     }
-
-    if (!_pcf8523.initialized() || _pcf8523.lostPower())
-    {
-      Serial.println(F("[sens] RTC is NOT initialized!"));
-      _pcf8523.adjust(DateTime(F(__DATE__), F(__TIME__)));
-      Serial.println(F("[sens] RTC Time set with compile time"));
-    }
-    _pcf8523.start();
-  }
-  else
-  {
-    Serial.println(F("empty"));
   }
 }
 
-void OXRS_SENSORS::tele()
+bool OXRS_SENSORS::scanI2CAddress(byte address, const char * name)
 {
-  // shortcut if sensor reporting is disabled
-  if (_updateMs == 0)
-  {
-    return;
-  }
+  Serial.print(F("[sens] - 0x"));
+  Serial.print(address, HEX);
+  Serial.print(F("..."));
 
-  if ((millis() - _lastUpdate) > _updateMs)
+  // Check if there is anything responding on this address
+  Wire.beginTransmission(address);
+  return Wire.endTransmission() == 0;
   {
-    StaticJsonDocument<150> json;
+    Serial.println(name);
+    return true;
+  }
+  else
+  {
+    Serial.println(F("empty"));
+    return false;
+  }
+}
+
+void OXRS_SENSORS::tele(JsonVariant json)
+{
+  if (_updateMs > 0 && (millis() - _lastUpdate) > _updateMs)
+  {
     char payload[8];
 
     // MCP9808 temp sensor has precedence over SHT40
@@ -221,12 +168,6 @@ void OXRS_SENSORS::tele()
       char cstr1[1];
       itoa(_sleepState, cstr1, 10);
       json["oledSleepState"] = cstr1;
-    }
-
-    // Check we have something to publish
-    if (!json.isNull())
-    {
-      _sensorMqtt->publishTelemetry(json.as<JsonVariant>());
     }
 
     // Reset our timer

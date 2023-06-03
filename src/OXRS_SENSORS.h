@@ -4,7 +4,6 @@
 #define OXRS_SENSORS_H
 
 #include <Arduino.h>
-#include <OXRS_MQTT.h>
 #include <ArduinoJson.h>
 #include <Wire.h>             // For I2C
 #include <Adafruit_MCP9808.h> // For temp sensor
@@ -58,15 +57,13 @@
 class OXRS_SENSORS
 {
 public:
-  OXRS_SENSORS(OXRS_MQTT &mqtt);
-
   void begin();
 
   void oled();
   void oled(IPAddress ip);
   void oled(byte * mac);
 
-  void tele();
+  void tele(JsonVariant json);
 
   void conf(JsonVariant json);
   void cmnd(JsonVariant json);
@@ -82,8 +79,6 @@ private:
   IPAddress _ipAddress;
 
   byte _mac[6];
-
-  OXRS_MQTT *_sensorMqtt;
 
   uint32_t _updateMs = DEFAULT_UPDATE_MS;
   uint32_t _lastUpdate;
@@ -122,6 +117,7 @@ private:
   void jsonRtcCommand(JsonVariant json);
 
   void scanI2CBus();
+  bool scanI2CAddress(byte address);
 
   void off_screen();
   void one_screen();
