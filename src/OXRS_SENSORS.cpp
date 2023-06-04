@@ -18,12 +18,12 @@ void OXRS_SENSORS::begin()
 {
   Serial.println(F("[sens] scanning for I2C devices..."));
 
-  if (scanI2CAddress(BH1750_I2C_ADDRESS, "BH1750"))
+  if (scanI2CAddress(BH1750_I2C_ADDRESS))
   {
     _bh1750Found = _bh1750.begin(BH1750::CONTINUOUS_HIGH_RES_MODE);
   }
 
-  if (scanI2CAddress(SHT40_I2C_ADDRESS, "SHT40"))
+  if (scanI2CAddress(SHT40_I2C_ADDRESS))
   {
     _sht40Found = _sht40.begin();
     if (_sht40Found)
@@ -33,7 +33,7 @@ void OXRS_SENSORS::begin()
     }
   }
 
-  if (scanI2CAddress(MCP9808_I2C_ADDRESS, "MCP9808"))
+  if (scanI2CAddress(MCP9808_I2C_ADDRESS))
   {
     _mcp9808Found = _mcp9808.begin(MCP9808_I2C_ADDRESS);
     if (_mcp9808Found)
@@ -43,7 +43,7 @@ void OXRS_SENSORS::begin()
   }
 }
 
-bool OXRS_SENSORS::scanI2CAddress(byte address, const char * name)
+bool OXRS_SENSORS::scanI2CAddress(byte address)
 {
   Serial.print(F("[sens] - 0x"));
   Serial.print(address, HEX);
@@ -53,7 +53,7 @@ bool OXRS_SENSORS::scanI2CAddress(byte address, const char * name)
   Wire.beginTransmission(address);
   if (Wire.endTransmission() == 0)
   {
-    Serial.println(name);
+    Serial.println("found");
     return true;
   }
   else
