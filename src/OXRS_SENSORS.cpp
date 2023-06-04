@@ -66,8 +66,8 @@ bool OXRS_SENSORS::scanI2CAddress(byte address, const char * name)
 void OXRS_SENSORS::setConfigSchema(JsonVariant json)
 {
   JsonObject _updateSeconds = json.createNestedObject("sensorUpdateSeconds");
-  _updateSeconds["title"] = "Sensor Publish Interval (seconds)";
-  _updateSeconds["description"] = "How often to publish values from the connected I2C sensors (defaults to 60 seconds, setting to 0 disables sensor reports). Must be a number between 0 and 86400 (i.e. 1 day).";
+  _updateSeconds["title"] = "Sensor Update Interval (seconds)";
+  _updateSeconds["description"] = "How often to read and report values from the connected I2C sensors (defaults to 60 seconds, setting to 0 disables sensor reports). Must be a number between 0 and 86400 (i.e. 1 day).";
   _updateSeconds["type"] = "integer";
   _updateSeconds["minimum"] = 0;
   _updateSeconds["maximum"] = 86400;
@@ -75,8 +75,9 @@ void OXRS_SENSORS::setConfigSchema(JsonVariant json)
   if (_mcp9808Found || _sht40Found)
   {
     JsonObject _tempUnits = json.createNestedObject("sensorTempUnits");
+    _tempUnits["title"] = "Sensor Temperature Units";
+    _tempUnits["description"] = "Publish temperature reports in celcius (default) or farenhite";
     _tempUnits["type"] = "string";
-    _tempUnits["description"] = "Temperature reports in celcius (default) or farenhite";
     JsonArray _tempUnitsEnum = _tempUnits.createNestedArray("enum");
     _tempUnitsEnum.add("c");
     _tempUnitsEnum.add("f");
@@ -98,13 +99,13 @@ void OXRS_SENSORS::conf(JsonVariant json)
     _updateMs = json["sensorUpdateSeconds"].as<uint32_t>() * 1000L;
   }
 
-  if (json.containsKey("sensorTempMode"))
+  if (json.containsKey("sensorTempUnits"))
   {
-    if (strcmp(json["sensorTempMode"], "c") == 0)
+    if (strcmp(json["sensorTempUnits"], "c") == 0)
     {
       _tempUnits = TEMP_C;
     }
-    else if (strcmp(json["sensorTempMode"], "f") == 0)
+    else if (strcmp(json["sensorTempUnits"], "f") == 0)
     {
       _tempUnits = TEMP_F;
     }
