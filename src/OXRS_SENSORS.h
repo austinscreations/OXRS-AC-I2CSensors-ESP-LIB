@@ -43,7 +43,7 @@ private:
   bool _bh1750Found = false;
   bool _sht40Found = false;
 
-  bool scanI2CAddress(byte address, const char * name);
+  bool scanI2CAddress(byte address);
 };
 
 #endif
