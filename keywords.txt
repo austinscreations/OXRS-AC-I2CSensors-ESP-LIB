@@ -9,7 +9,6 @@ OXRS_SENSORS	KEYWORD1
 #######################################
 
 begin       KEYWORD2
-oled		KEYWORD2
 tele		KEYWORD2
 conf		KEYWORD2
 cmnd		KEYWORD2
