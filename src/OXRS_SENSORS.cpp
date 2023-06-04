@@ -74,15 +74,15 @@ void OXRS_SENSORS::setConfigSchema(JsonVariant json)
 
   if (_mcp9808Found || _sht40Found)
   {
-    JsonObject _tempMode = json.createNestedObject("sensorTempMode");
-    _tempMode["type"] = "string";
-    _tempMode["description"] = "Temperature in celcius (default) or farenhite";
-    JsonArray _tempEnum = _tempMode.createNestedArray("enum");
-    _tempEnum.add("c");
-    _tempEnum.add("f");
-    JsonArray _tempEnumNames = _tempMode.createNestedArray("enumNames");
-    _tempEnumNames.add("celcius");
-    _tempEnumNames.add("farenhite");
+    JsonObject _tempUnits = json.createNestedObject("sensorTempUnits");
+    _tempUnits["type"] = "string";
+    _tempUnits["description"] = "Temperature reports in celcius (default) or farenhite";
+    JsonArray _tempUnitsEnum = _tempUnits.createNestedArray("enum");
+    _tempUnitsEnum.add("c");
+    _tempUnitsEnum.add("f");
+    JsonArray _tempUnitsEnumNames = _tempUnits.createNestedArray("enumNames");
+    _tempUnitsEnumNames.add("celcius");
+    _tempUnitsEnumNames.add("farenhite");
   }
 }
 
@@ -102,11 +102,11 @@ void OXRS_SENSORS::conf(JsonVariant json)
   {
     if (strcmp(json["sensorTempMode"], "c") == 0)
     {
-      _tempMode = TEMP_C;
+      _tempUnits = TEMP_C;
     }
     else if (strcmp(json["sensorTempMode"], "f") == 0)
     {
-      _tempMode = TEMP_F;
+      _tempUnits = TEMP_F;
     }
   }
 }
@@ -131,11 +131,11 @@ void OXRS_SENSORS::tele(JsonVariant json)
     {
       float temperature = NAN;
 
-      if (_tempMode == TEMP_C)
+      if (_tempUnits == TEMP_C)
       {
         temperature = _mcp9808.readTempC();
       }
-      else if (_tempMode == TEMP_F)
+      else if (_tempUnits == TEMP_F)
       {
         temperature = _mcp9808.readTempF();
       }
@@ -157,7 +157,7 @@ void OXRS_SENSORS::tele(JsonVariant json)
       {
         // sensor reading is in C, so check if we need to convert to F
         float temperature = temp.temperature;
-        if (_tempMode == TEMP_F)
+        if (_tempUnits == TEMP_F)
         {
           temperature = (temperature * 1.8) + 32;
         }
