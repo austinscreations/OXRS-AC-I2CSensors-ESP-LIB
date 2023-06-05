@@ -14,6 +14,11 @@ BH1750 _bh1750;
 // SHT40 temperature/humitity Sensor
 Adafruit_SHT4x _sht40 = Adafruit_SHT4x();
 
+double round(float value)
+{
+  return (int)(value * 10.0f) / 10.0f;
+}
+
 void OXRS_SENSORS::begin()
 {
   Serial.println(F("[sens] scanning for I2C devices..."));
@@ -163,22 +168,22 @@ void OXRS_SENSORS::tele(JsonVariant json)
     {
       if (_tempUnits == TEMP_F)
       {
-        json["temperature"] = (temperature * 1.8) + 32;
+        json["temperature"] = round((temperature * 1.8) + 32);
       }
       else
       {
-        json["temperature"] = temperature;
+        json["temperature"] = round(temperature);
       }
     }
 
     if (!isnan(humidity))
     {
-      json["humidity"] = humidity;
+      json["humidity"] = round(humidity);
     }
 
     if (!isnan(lux))
     {
-      json["lux"] = lux;
+      json["lux"] = round(lux);
     }
 
     // Reset our timer
