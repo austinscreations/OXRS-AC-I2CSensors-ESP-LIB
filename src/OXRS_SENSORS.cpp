@@ -14,7 +14,7 @@ BH1750 _bh1750;
 // SHT40 temperature/humitity Sensor
 Adafruit_SHT4x _sht40 = Adafruit_SHT4x();
 
-double round(float value)
+double roundTo1Dp(float value)
 {
   return (int)(value * 10.0f) / 10.0f;
 }
@@ -168,22 +168,22 @@ void OXRS_SENSORS::tele(JsonVariant json)
     {
       if (_tempUnits == TEMP_F)
       {
-        json["temperature"] = round((temperature * 1.8) + 32);
+        json["temperature"] = roundTo1Dp((temperature * 1.8) + 32);
       }
       else
       {
-        json["temperature"] = round(temperature);
+        json["temperature"] = roundTo1Dp(temperature);
       }
     }
 
     if (!isnan(humidity))
     {
-      json["humidity"] = round(humidity);
+      json["humidity"] = roundTo1Dp(humidity);
     }
 
     if (!isnan(lux))
     {
-      json["lux"] = round(lux);
+      json["lux"] = roundTo1Dp(lux);
     }
 
     // Reset our timer
