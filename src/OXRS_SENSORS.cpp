@@ -125,27 +125,14 @@ void OXRS_SENSORS::tele(JsonVariant json)
   // Check if we are ready to publish
   if ((millis() - _lastUpdate) > _updateMs)
   {
-    char payload[8];
+    float temperature = NAN;
+    float humidity = NAN;
+    float lux = NAN;
 
-    // MCP9808 temp sensor has precedence over SHT40
+    // Earlier sensors in these checks have precedence
     if (_mcp9808Found)
     {
-      float temperature = NAN;
-
-      if (_tempUnits == TEMP_C)
-      {
-        temperature = _mcp9808.readTempC();
-      }
-      else if (_tempUnits == TEMP_F)
-      {
-        temperature = _mcp9808.readTempF();
-      }
-
-      if (temperature != NAN)
-      {
-        sprintf(payload, "%2.1f", temperature);
-        json["temperature"] = payload;
-      }
+      temperature = _mcp9808.readTempC();
     }
 
     if (_sht40Found)
@@ -153,31 +140,45 @@ void OXRS_SENSORS::tele(JsonVariant json)
       sensors_event_t humid, temp;
       _sht40.getEvent(&humid, &temp);
 
-      // only publish temp reading from this sensor if the MCP9808 is not found
-      if (!_mcp9808Found)
+      if (isnan(temperature))
       {
-        // sensor reading is in C, so check if we need to convert to F
-        float temperature = temp.temperature;
-        if (_tempUnits == TEMP_F)
-        {
-          temperature = (temperature * 1.8) + 32;
-        }
-
-        sprintf(payload, "%2.1f", temperature);
-        json["temperature"] = payload;
+        temperature = temp.temperature;
       }
-
-      // always publish humidity if this sensor is found
-      float humidity = humid.relative_humidity;
-      sprintf(payload, "%2.1f", humidity);
-      json["humidity"] = payload;
+      
+      if (isnan(humidity))
+      {
+        humidity = humid.relative_humidity;
+      }
     }
 
     if (_bh1750Found && _bh1750.measurementReady())
     {
-      float lux = _bh1750.readLightLevel();
-      sprintf(payload, "%2.1f", lux);
-      json["lux"] = payload;
+      if (isnan(lux))
+      {
+        lux = _bh1750.readLightLevel();
+      }
+    }
+
+    if (!isnan(temperature))
+    {
+      if (_tempUnits == TEMP_F)
+      {
+        json["temperature"] = (temperature * 1.8) + 32;
+      }
+      else
+      {
+        json["temperature"] = temperature;
+      }
+    }
+
+    if (!isnan(humidity))
+    {
+      json["humidity"] = humidity;
+    }
+
+    if (!isnan(lux))
+    {
+      json["lux"] = lux;
     }
 
     // Reset our timer
