@@ -14,9 +14,9 @@ BH1750 _bh1750;
 // SHT40 temperature/humitity Sensor
 Adafruit_SHT4x _sht40 = Adafruit_SHT4x();
 
-double roundTo1Dp(float value)
+double roundTo1Dp(double value)
 {
-  return (int)(value * 10.0f) / 10.0f;
+  return (int)(value * 10.0) / 10.0;
 }
 
 void OXRS_SENSORS::begin()
